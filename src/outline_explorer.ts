@@ -21,23 +21,36 @@ function GetMatchedEntryOfRange(entry: OutlineExplorerEntry, range: vscode.Range
 
     let documentSymbol = entry.outlineEntry.documentSymbol;
 
-    if (documentSymbol.selectionRange.isEqual(range)) {
-        return entry;
-    }
-
+    // it is not in the range of the documentSymbol
     if (!documentSymbol.range.contains(range)) {
         return undefined;
     }
 
+    // equals has the highest priority
+    if (documentSymbol.selectionRange.isEqual(range)) {
+        return entry;
+    }
+
+    // if it has no children and contains the range, return it
     if (!entry.children) {
+        if (documentSymbol.selectionRange.contains(range)) {
+            return entry;
+        }
+
         return undefined;
     }
 
+    // then children first
     for (let child of entry.children) {
         let result = GetMatchedEntryOfRange(child, range);
         if (result) {
             return result;
         }
+    }
+
+    // if it contains the range, return
+    if (documentSymbol.selectionRange.contains(range)) {
+        return entry;
     }
 
     return undefined;
@@ -61,9 +74,8 @@ function newOutlineEntry(documentSymbol: vscode.DocumentSymbol, parent: OutlineE
     };
 }
 
-// 创建 uri 及其 parent 对应的文件实体，如果 uri 是 workspace folder，则返回空
-async function createFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<string, OutlineExplorerEntry>): Promise<OutlineExplorerEntry[]> {
-    // 创建对应的文件实体
+// create file entries of uri and it's parents, if uri is out of workspaces, return empty
+async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<string, OutlineExplorerEntry>): Promise<OutlineExplorerEntry[]> {
     let fileEntriesInPath = await fileSystemProvider.getFileEntriesInPath(uri);
     if (!fileEntriesInPath) {
         return [];
@@ -179,6 +191,8 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         eventHandlerManager.RegisterEventListener(eventHandler.VSCodeEvent.WorkspaceFoldersChanged, this);
 
         this.UpdateIgnoreFiles();
+
+        this.reveal(vscode.window.activeTextEditor?.document.uri);
     }
 
     async UpdateIgnoreFiles() {
@@ -191,40 +205,43 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
-        console.log("onDidChangeVisibility", e);
         this.treeViewVisible = e.visible;
     }
 
 
     async OnActiveTextEditorChanged(e: vscode.TextEditor | undefined) {
-        console.log("ActiveTextEditor 发生了变化:", e);
         if (!e) {
-            console.info("onActiveEditorChanged 未找到活动编辑器");
             return;
         }
 
-        const uri = e.document.uri;
         if (this.ignoreActiveEditorChange) {
-            console.log("忽略活动编辑器变化");
             this.ignoreActiveEditorChange = false;
             return;
         }
 
         if (!this.treeViewVisible) {
-            console.log("onActiveEditorChanged TreeView 未显示");
+            return;
+        }
+
+        const uri = e.document.uri;
+        await this.reveal(uri);
+    }
+
+    async reveal(uri: vscode.Uri | undefined) {
+        if (!uri) {
             return;
         }
 
         let entry = this.uri2FileEntry.get(uri.toString());
         if (!entry) {
-            const entries = await createFileEntriesInPath(uri, this.uri2FileEntry);
+            const entries = await getOrCreateFileEntriesInPath(uri, this.uri2FileEntry);
             if (entries.length === 0) {
-                console.log("onActiveEditorChanged 未找到对应的OutlineExplorerItem", uri.toString());
                 return;
             }
-            console.log("加载了新的文件实体", entries);
+
             entry = entries[entries.length - 1];
         }
+
         this.treeView.reveal(entry);
     }
 
@@ -240,17 +257,16 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         let outlineEntries = this.uri2OutlineEntries.get(uri.toString());
 
         if (!outlineEntries) {
-            // 创建 file entry
+            // create file entry
             if (!fileEntry) {
-                let fileEntries = await createFileEntriesInPath(uri, this.uri2FileEntry);
+                let fileEntries = await getOrCreateFileEntriesInPath(uri, this.uri2FileEntry);
                 if (!fileEntries || fileEntries.length === 0) {
-                    console.log("onSelectionChanged createFileEntries 返回的结果为空", uri, fileEntries);
                     return;
                 }
 
                 fileEntry = fileEntries[fileEntries.length - 1];
             }
-            // 这里考虑是否要通知 TreeView 刷新
+
             outlineEntries = await this.getOutlineEntries(fileEntry);
         }
 
@@ -262,26 +278,19 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             let result = GetMatchedEntryOfRange(outlineEntry, selection);
             if (result) {
                 this.treeView.reveal(result);
-
-                console.log("onSelectionChanged 找到对应的item", selection, outlineEntry, result);
-
                 return;
             }
         }
 
-        console.log("onSelectionChanged 未找到对应的item", selection, outlineEntries);
     }
 
     async OnTextDocumentChanged(e: vscode.TextDocumentChangeEvent) {
-        console.log("debouncedOnDocumentUpdate 开始处理事件:", e);
-        // 其实是能够做到更精细化的更新的，初步先这样
         const uri = e.document.uri;
 
         let entry = this.uri2FileEntry.get(uri.toString());
         if (!entry) {
-            let entries = await createFileEntriesInPath(uri, this.uri2FileEntry);
+            let entries = await getOrCreateFileEntriesInPath(uri, this.uri2FileEntry);
             if (entries.length === 0) {
-                console.log("onDocumentChanged 未找到对应的OutlineExplorerItem", uri.toString());
                 return;
             }
             entry = entries[entries.length - 1];
@@ -289,7 +298,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
 
         this.getOutlineEntries(entry);
-        console.log("debouncedOnDocumentUpdate 处理完毕:", entry);
 
         this.treeDataChangedEventEmitter.fire(entry);
     }
@@ -308,8 +316,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
-        console.log("OnWorkspaceFoldersChanged", event);
-
         for (let removed of event.removed) {
             this.removeOutlineEntry(removed.uri);
         }
@@ -325,8 +331,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             return createOutlineEntryTreeItem(element);
         }
 
-        console.log("非法的 outline entry", element);
-
         throw new Error('getTreeItem Invalid OutlineExploreEntry');
     }
 
@@ -341,9 +345,8 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         const uri = element.fileEntry.uri;
         if (element.isFileEntry) {
-            let fileEntries = await createFileEntriesInPath(uri, this.uri2FileEntry);
+            let fileEntries = await getOrCreateFileEntriesInPath(uri, this.uri2FileEntry);
             if (!fileEntries || fileEntries.length === 0) {
-                console.log("getParent isFileEntry createFileEntries 返回的结果为空", uri, fileEntries);
                 return undefined;
             }
 
@@ -361,22 +364,18 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
             const parents = outlineProvider.getParentsOfDocumentSymbol(outlineEntries, targetOutlineEntry.documentSymbol);
             if (!parents) {
-                console.log("getParent 没有找到路径", outlineEntries, element);
                 return undefined;
             }
 
-            // 如果是顶级 OutlineExplorerEntry，需要返回文件实体
             if (parents.length === 0) {
-                let fileEntries = await createFileEntriesInPath(uri, this.uri2FileEntry);
+                let fileEntries = await getOrCreateFileEntriesInPath(uri, this.uri2FileEntry);
                 if (fileEntries.length === 0) {
-                    console.log("getParent outlineEntry createFileEntries 返回的结果为空", uri, fileEntries);
                     return undefined;
                 }
 
                 return fileEntries[fileEntries.length - 1];
             } else {
                 const parentOutlineEntry = parents[parents.length - 1];
-
                 const parentEntry = outlineExplorerItems.find(item => {
                     if (!item.outlineEntry) {
                         return false;
@@ -387,13 +386,9 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
                 if (parentEntry) {
                     return parentEntry;
                 }
-
-                console.log("getParent 未找到对应的父节点", parents);
                 return undefined;
             }
         }
-
-        console.log("getParent 错误的数据结构", element);
 
         return undefined;
     }
@@ -514,14 +509,11 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         return workspaceFolderItems;
     }
     async onclick(item: OutlineExplorerEntry) {
-        console.log("发生点击事件a:", item);
         if (!item) {
-            console.log("item 为空");
             return;
         }
 
         if (item.isFileEntry || !item.outlineEntry) {
-            console.log("点击了文件");
             return;
         }
 
@@ -531,7 +523,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         let targetEditor = vscode.window.activeTextEditor;
         let document = targetEditor?.document;
 
-        // 活动编辑器发生了变化，打开新的编辑器
         if (!document || document.uri.toString() !== item.fileEntry.uri.toString()) {
             document = await vscode.workspace.openTextDocument(item.fileEntry.uri.path);
         }
