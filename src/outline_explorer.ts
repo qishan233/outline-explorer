@@ -247,6 +247,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
 
     async OnTextEditorSelectionChanged(e: vscode.TextEditorSelectionChangeEvent) {
+        if (!this.treeViewVisible) {
+            return;
+        }
+
         const selection = e.selections[0];
         if (selection.isEmpty) {
             return;
@@ -285,6 +289,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     async OnTextDocumentChanged(e: vscode.TextDocumentChangeEvent) {
+        if (!this.treeViewVisible) {
+            return;
+        }
+
         const uri = e.document.uri;
 
         let entry = this.uri2FileEntry.get(uri.toString());
@@ -410,6 +418,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     async getOutlineEntries(element: OutlineExplorerEntry): Promise<OutlineExplorerEntry[]> {
+        if (element.fileEntry.type !== vscode.FileType.File) {
+            return [];
+        }
+
         const uri = element.fileEntry.uri;
         const outlineItems = await outlineProvider.GetOutline(uri);
         let entries = outlineItems.map(documentSymbol => {
@@ -426,12 +438,12 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         let uri = element.fileEntry.uri;
         let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
-        let gitIgnoreUris: vscode.Uri[] | undefined;
+        let ignoredUris: vscode.Uri[] | undefined;
         if (workspaceFolder) {
-            gitIgnoreUris = this.workspaceFolder2IgnoreUris.get(workspaceFolder.uri.toString());
+            ignoredUris = this.workspaceFolder2IgnoreUris.get(workspaceFolder.uri.toString());
         }
 
-        let fileEntries = await fileSystemProvider.getFileEntriesInDir(uri, gitIgnoreUris);
+        let fileEntries = await fileSystemProvider.getFileEntriesInDir(uri, ignoredUris);
 
         const outlineExplorerEntries = fileEntries.map(fileEntry => {
             return {
@@ -459,8 +471,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             }
 
             if (element.isFileEntry) {
-                const fileEntry = element.fileEntry;
-                const uri = fileEntry.uri;
                 // if directory, read directory and return children
                 if (element.fileEntry.type === vscode.FileType.Directory) {
                     return this.getOutlineEntriesChildren(element);
