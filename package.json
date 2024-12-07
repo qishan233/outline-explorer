@@ -1,24 +1,56 @@
 {
   "name": "outline-explorer",
-  "displayName": "outline-explorer",
-  "description": "this extension support the ability of showing outline info in the way just like resource explorer",
+  "displayName": "Outline Explorer",
+  "description": "This extension support the ability of showing outline info in the way just like resource explorer",
   "version": "0.0.1",
+  "icon": "resources/extension-icon.png",
+  "publisher": "qishan233",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "vscode": "^1.95.0"
   },
-  "categories": [
-    "Other"
+  "keywords": [
+    "outline",
+    "explorer"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "outline-explorer.helloWorld",
-        "title": "Hello World"
+        "command": "outline-explorer.item-clicked",
+        "title": "explorer-item-clicked"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "outline-explorer",
+          "title": "Outline Explorer",
+          "icon": "resources/view-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "outline-explorer": [
+        {
+          "id": "outline-explorer",
+          "name": "Outline Explorer",
+          "canToggleVisibility": true,
+          "icon": "resources/view-icon.svg"
+        }
+      ]
+    }
   },
+  "pricing": "Free",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qishan233/outline-explorer"
+  },
+  "categories": [
+    "Other"
+  ],
+  "homepage": "https://github.com/qishan233/outline-explorer/blob/main/README.md",
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
