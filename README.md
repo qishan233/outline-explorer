@@ -1,5 +1,6 @@
 # outline-explorer
-[中文]([English](https://github.com/qishan233/outline-explorer/blob/main/README_ZH.md))
+
+[中文](https://github.com/qishan233/outline-explorer/blob/main/README_ZH.md)
 
 This extension supports displaying outlines in a manner similar to the explorer, inspired by the "Show Member" feature in JetBrains IDEs.
 

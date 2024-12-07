@@ -1,4 +1,5 @@
 # outline-explorer
+
 [English](https://github.com/qishan233/outline-explorer/blob/main/README.md)
 
 该扩展支持以类似资源管理器的方式显示大纲，灵感来自 JetBrains IDE 中的“Show Member”功能。
