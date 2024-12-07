@@ -2,8 +2,6 @@
 
 All notable changes to the "outline-explorer" extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.0.1] - 2024-12-07
 
-## [Unreleased]
-
-- Initial release
+- Added the feature to display files and their outline information, with support for interaction with the editor.

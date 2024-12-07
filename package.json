@@ -1,7 +1,7 @@
 {
   "name": "outline-explorer",
   "displayName": "Outline Explorer",
-  "description": "This extension support the ability of showing outline info in the way just like resource explorer",
+  "description": "This extension supports displaying outlines in a manner similar to the explorer, inspired by the "Show Member" feature in JetBrains IDEs.",
   "version": "0.0.1",
   "icon": "resources/extension-icon.png",
   "publisher": "qishan233",
@@ -10,8 +10,9 @@
     "vscode": "^1.95.0"
   },
   "keywords": [
-    "outline",
-    "explorer"
+    "Outline",
+    "Explorer",
+    "JetBrains"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
