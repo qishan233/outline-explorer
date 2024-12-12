@@ -1,13 +1,36 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as Logger from './log';
+
+const FILE_ENTRY_MAX_REFRESH_TIME = 10;
+
+export class FileEntry {
+    uri: vscode.Uri;
+    type: vscode.FileType;
+
+    refreshTimes: number;
+    constructor(uri: vscode.Uri, type: vscode.FileType) {
+        this.uri = uri;
+        this.type = type;
+        this.refreshTimes = 0;
+    }
+
+    resetRefreshTimes() {
+        this.refreshTimes = 0;
+    }
+
+    increaseRefreshTimes() {
+        this.refreshTimes++;
+    }
+}
+
 
 async function isFile(uri: vscode.Uri): Promise<boolean | Error> {
     try {
         const stat = await vscode.workspace.fs.stat(uri);
         return stat.type === vscode.FileType.File;
     } catch (error: any) {
-        console.log('isFile 出错了：uri:', uri);
-        console.error('Error checking file type:', error, uri);
+        Logger.Error('Error checking file type:', error, uri);
         return error;
     }
 }
@@ -43,7 +66,7 @@ export async function getFileEntriesInPath(uri: vscode.Uri): Promise<FileEntry[]
 
     try {
         let uriIsFile = await isFile(uri);
-        const p = { uri: uri, type: uriIsFile ? vscode.FileType.File : vscode.FileType.Directory };
+        const p = new FileEntry(uri, uriIsFile ? vscode.FileType.File : vscode.FileType.Directory);
 
         let parentUri = getWorkspaceParentUri(uri);
         if (!parentUri) {
@@ -58,7 +81,7 @@ export async function getFileEntriesInPath(uri: vscode.Uri): Promise<FileEntry[]
 
         return [...parents, p];
     } catch (error) {
-        console.error('getFileEntries error:', error);
+        Logger.Error('getFileEntriesInPath error:', error);
         return undefined;
     }
 }
@@ -88,19 +111,14 @@ export async function getFileEntriesInDir(uri: vscode.Uri, ignores: vscode.Uri[]
         });
 
         const fileEntries = children.map(([name, type]) => {
-            return { uri: vscode.Uri.file(path.join(uri.fsPath, name)), type };
+            return new FileEntry(vscode.Uri.joinPath(uri, name), type);
         });
 
         return fileEntries;
     } catch (error) {
-        console.error('getFileEntriesInDir error:', error);
+        Logger.Error('getFileEntriesInDir error:', error);
     }
 
 
     return [];
-}
-
-export interface FileEntry {
-    uri: vscode.Uri;
-    type: vscode.FileType;
 }
