@@ -188,6 +188,9 @@ function createFileEntryTreeItem(element: OutlineExplorerEntry): vscode.TreeItem
     } else {
         treeItem.iconPath = vscode.ThemeIcon.Folder;
     }
+
+    treeItem.contextValue = fileEntry.type === vscode.FileType.File ? 'file' : 'folder';
+
     return treeItem;
 }
 
@@ -212,6 +215,8 @@ function createOutlineEntryTreeItem(element: OutlineExplorerEntry): vscode.TreeI
         title: 'Click Item',
         arguments: [element]
     };
+
+    treeItem.contextValue = 'outline';
 
     return treeItem;
 }
@@ -239,6 +244,9 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         context.subscriptions.push(this.treeView);
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.item-clicked', async (item) => {
             await this.onclick(item);
+        }, this));
+        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.refresh', (element) => {
+            this.refresh(element);
         }, this));
 
         const eventHandlerManager = new eventHandler.VSCodeEventHandlerManager();
@@ -389,6 +397,8 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     getTreeItem(element: OutlineExplorerEntry): vscode.TreeItem {
+        console.log('getTreeItem', element);
+
         if (element.isFileEntry()) {
             return createFileEntryTreeItem(element);
         }
@@ -519,6 +529,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     async getChildren(element?: OutlineExplorerEntry): Promise<OutlineExplorerEntry[]> {
+        console.log('getChildren', element);
         if (element) {
             if (element.children) {
                 return element.children;
@@ -590,6 +601,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         return;
     }
     refresh(element: OutlineExplorerEntry | undefined): void {
+        console.log('refresh', element);
         this.treeDataChangedEventEmitter.fire(element);
     }
 }

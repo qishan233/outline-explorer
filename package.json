@@ -21,6 +21,11 @@
       {
         "command": "outline-explorer.item-clicked",
         "title": "explorer-item-clicked"
+      },
+      {
+        "command": "outline-explorer.refresh",
+        "title": "outline-explorer-refresh",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -39,6 +44,22 @@
           "name": "Outline Explorer",
           "canToggleVisibility": true,
           "icon": "resources/view-icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "outline-explorer.refresh",
+          "when": "view == outline-explorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "outline-explorer.refresh",
+          "when": "view == outline-explorer && viewItem == file",
+          "group": "inline"
         }
       ]
     }
