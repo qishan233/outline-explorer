@@ -40,6 +40,8 @@ class VSCodeEventHandlerManager {
         this.handlers.get(event)?.push(listener);
     }
 
+    private debouncedTime = 300;
+
     constructor() {
         this.handlers = new Map<VSCodeEvent, VSCodeEventListener[]>();
         vscode.workspace.onDidChangeTextDocument(e => this.OnTextDocumentChanged(e));
@@ -49,9 +51,8 @@ class VSCodeEventHandlerManager {
         vscode.window.onDidChangeActiveTextEditor(e => this.OnActiveTextEditorChanged(e));
     }
 
-    private debouncedOnTextDocumentChanged = debounce(this._OnTextDocumentChanged, 500);
-    private debouncedOnActiveTextEditorChanged = debounce(this._OnActiveTextEditorChanged, 500);
-    private debouncedOnTextEditorSelectionChanged = debounce(this._OnTextEditorSelectionChanged, 500);
+    private debouncedOnTextDocumentChanged = debounce(this._OnTextDocumentChanged, this.debouncedTime);
+    private debouncedOnTextEditorSelectionChanged = debounce(this._OnTextEditorSelectionChanged, this.debouncedTime);
 
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent) {
         this._OnWorkspaceFoldersChanged(event);
@@ -76,7 +77,7 @@ class VSCodeEventHandlerManager {
             return;
         }
 
-        this.debouncedOnActiveTextEditorChanged(event);
+        this._OnActiveTextEditorChanged(event);
     }
 
     OnTextEditorSelectionChanged(event: vscode.TextEditorSelectionChangeEvent) {
