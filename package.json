@@ -20,11 +20,11 @@
     "commands": [
       {
         "command": "outline-explorer.item-clicked",
-        "title": "explorer-item-clicked"
+        "title": "%command.title.click%"
       },
       {
         "command": "outline-explorer.refresh",
-        "title": "outline-explorer-refresh",
+        "title": "%command.title.refresh%",
         "icon": "$(refresh)"
       }
     ],
@@ -59,7 +59,7 @@
         {
           "command": "outline-explorer.refresh",
           "when": "view == outline-explorer && viewItem == file",
-          "group": "inline"
+          "group": "navigation"
         }
       ]
     }

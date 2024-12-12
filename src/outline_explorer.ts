@@ -235,6 +235,8 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     private ignoreActiveEditorChange = false;
     private treeViewVisible = false;
 
+    outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel("outline-explorer");
+
     constructor(context: vscode.ExtensionContext) {
         super();
 
@@ -257,7 +259,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         this.UpdateIgnoreFiles();
 
+        this.refresh(undefined);
+
         this.reveal(vscode.window.activeTextEditor?.document.uri);
+
     }
 
     async UpdateIgnoreFiles() {
