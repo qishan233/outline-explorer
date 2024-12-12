@@ -2,25 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as Logger from './log';
 
-const FILE_ENTRY_MAX_REFRESH_TIME = 10;
 
 export class FileEntry {
     uri: vscode.Uri;
     type: vscode.FileType;
 
-    refreshTimes: number;
     constructor(uri: vscode.Uri, type: vscode.FileType) {
         this.uri = uri;
         this.type = type;
-        this.refreshTimes = 0;
-    }
-
-    resetRefreshTimes() {
-        this.refreshTimes = 0;
-    }
-
-    increaseRefreshTimes() {
-        this.refreshTimes++;
     }
 }
 

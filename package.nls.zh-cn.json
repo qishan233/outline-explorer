@@ -1,4 +1,6 @@
 {
     "command.title.click": "点击",
-    "command.title.refresh": "刷新"
+    "command.title.refresh": "刷新",
+    "extension.name": "大纲浏览器",
+    "view.welcome.content": "欢迎使用大纲浏览器！此扩展正在初始化，请稍等... 或者没有内容可显示。"
 }

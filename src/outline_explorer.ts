@@ -216,7 +216,7 @@ function createOutlineEntryTreeItem(element: OutlineExplorerEntry): vscode.TreeI
     return treeItem;
 }
 
-
+const DelayFirstRefreshTime = 5000;
 
 export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEventListener implements vscode.TreeDataProvider<OutlineExplorerEntry>, eventHandler.VSCodeEventListener {
     private treeDataChangedEventEmitter: vscode.EventEmitter<OutlineExplorerEntry | OutlineExplorerEntry[] | void | void | null | undefined> = new vscode.EventEmitter<OutlineExplorerEntry[]>();
@@ -254,9 +254,14 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         this.UpdateIgnoreFiles();
 
-        this.refresh(undefined);
+        setTimeout(() => {
+            Logger.Info('First Refresh Begin');
 
-        this.reveal(vscode.window.activeTextEditor?.document.uri);
+            this.refresh(undefined);
+            this.revealUri(vscode.window.activeTextEditor?.document.uri);
+
+            Logger.Info('First Refresh End');
+        }, DelayFirstRefreshTime);
 
     }
 
@@ -289,10 +294,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         }
 
         const uri = e.document.uri;
-        await this.reveal(uri);
+        await this.revealUri(uri);
     }
 
-    async reveal(uri: vscode.Uri | undefined) {
+    async revealUri(uri: vscode.Uri | undefined) {
         if (!uri) {
             return;
         }
@@ -307,7 +312,11 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             entry = entries[entries.length - 1];
         }
 
-        this.treeView.reveal(entry);
+        this.treeView.reveal(entry, {
+            select: true,
+            focus: false,
+            expand: true
+        });
     }
 
 
@@ -397,8 +406,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     getTreeItem(element: OutlineExplorerEntry): vscode.TreeItem {
-        console.log('getTreeItem', element);
-
         if (element.isFileEntry()) {
             return createFileEntryTreeItem(element);
         }
@@ -502,7 +509,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         return entries;
     }
 
-    async getOutlineEntriesChildren(element: OutlineExplorerEntry): Promise<OutlineExplorerEntry[]> {
+    async getOutlineEntriesInDir(element: OutlineExplorerEntry): Promise<OutlineExplorerEntry[]> {
         let uri = element.fileEntry.uri;
         let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
@@ -530,7 +537,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     }
 
     async getChildren(element?: OutlineExplorerEntry): Promise<OutlineExplorerEntry[]> {
-        console.log('getChildren', element);
         if (element) {
             if (element.children) {
                 return element.children;
@@ -539,7 +545,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             if (element.isFileEntry()) {
                 // if directory, read directory and return children
                 if (element.fileEntry.type === vscode.FileType.Directory) {
-                    return this.getOutlineEntriesChildren(element);
+                    return this.getOutlineEntriesInDir(element);
                 } else {
                     return this.getOutlineEntries(element);
                 }
@@ -569,7 +575,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
             this.uri2FileEntry.set(workspaceFolder.uri.toString(), workspaceFolderEntry);
 
-            await this.getOutlineEntriesChildren(workspaceFolderEntry);
+            await this.getOutlineEntriesInDir(workspaceFolderEntry);
 
             workspaceFolderItems.push(workspaceFolderEntry);
         }
@@ -603,8 +609,29 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
         return;
     }
-    refresh(element: OutlineExplorerEntry | undefined): void {
-        console.log('refresh', element);
+
+    async refresh(element: OutlineExplorerEntry | undefined): Promise<void> {
+        if (element) {
+            await this.resetElement(element);
+        }
+
         this.treeDataChangedEventEmitter.fire(element);
+
+        if (element) {
+            this.treeView.reveal(element, {
+                select: true,
+                focus: false,
+                expand: true
+            });
+        }
+
+    }
+
+    async resetElement(element: OutlineExplorerEntry) {
+        this.uri2OutlineEntries.delete(element.fileEntry.uri.toString());
+        for (let child of element.children ?? []) {
+            child.parent = undefined;
+        }
+        await this.getOutlineEntries(element);
     }
 }
