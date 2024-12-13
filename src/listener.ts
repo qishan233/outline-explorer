@@ -2,24 +2,30 @@ import * as vscode from 'vscode';
 import { isInWorkspace } from './file_info';
 
 export {
-    VSCodeEventListener,
-    BaseVSCodeEventListener,
+    VSCodeEventHandler,
+    BaseVSCodeEventHandler,
     VSCodeEvent,
     VSCodeEventHandlerManager
 };
 
-interface VSCodeEventListener {
+interface VSCodeEventHandler {
     OnTextDocumentChanged(event: vscode.TextDocumentChangeEvent): void;
     OnActiveTextEditorChanged(this: any, event: vscode.TextEditor | undefined): void;
     OnTextEditorSelectionChanged(this: any, event: vscode.TextEditorSelectionChangeEvent): void;
     OnWorkspaceFoldersChanged(this: any, event: vscode.WorkspaceFoldersChangeEvent): void;
+    OnRenameFiles(this: any, event: vscode.FileRenameEvent): void;
+    OnCreateFiles(this: any, event: vscode.FileCreateEvent): void;
+    OnDeleteFiles(this: any, event: vscode.FileDeleteEvent): void;
 }
 
-class BaseVSCodeEventListener implements VSCodeEventListener {
+class BaseVSCodeEventHandler implements VSCodeEventHandler {
     OnTextDocumentChanged(event: vscode.TextDocumentChangeEvent): void { }
     OnActiveTextEditorChanged(event: vscode.TextEditor | undefined): void { }
     OnTextEditorSelectionChanged(event: vscode.TextEditorSelectionChangeEvent): void { }
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void { }
+    OnRenameFiles(this: any, event: vscode.FileRenameEvent): void { }
+    OnCreateFiles(this: any, event: vscode.FileCreateEvent): void { }
+    OnDeleteFiles(this: any, event: vscode.FileDeleteEvent): void { }
 }
 
 enum VSCodeEvent {
@@ -28,35 +34,55 @@ enum VSCodeEvent {
     ActiveTextEditorChanged,
     TextEditorSelectionChanged,
     WorkspaceFoldersChanged,
+    RenameFiles,
+    CreateFiles,
+    DeleteFiles
 }
 
 class VSCodeEventHandlerManager {
-    private handlers: Map<VSCodeEvent, VSCodeEventListener[]>;
+    private handlers: Map<VSCodeEvent, VSCodeEventHandler[]>;
 
-    public RegisterEventListener(event: VSCodeEvent, listener: VSCodeEventListener) {
+    public RegisterEventHandler(event: VSCodeEvent, handler: VSCodeEventHandler) {
         if (!this.handlers.has(event)) {
             this.handlers.set(event, []);
         }
-        this.handlers.get(event)?.push(listener);
+        this.handlers.get(event)?.push(handler);
     }
 
     private debouncedTime = 300;
 
     constructor() {
-        this.handlers = new Map<VSCodeEvent, VSCodeEventListener[]>();
+        this.handlers = new Map<VSCodeEvent, VSCodeEventHandler[]>();
         vscode.workspace.onDidChangeTextDocument(e => this.OnTextDocumentChanged(e));
         vscode.workspace.onDidChangeWorkspaceFolders(e => this.OnWorkspaceFoldersChanged(e));
 
         vscode.window.onDidChangeTextEditorSelection(e => this.OnTextEditorSelectionChanged(e));
         vscode.window.onDidChangeActiveTextEditor(e => this.OnActiveTextEditorChanged(e));
+
+        vscode.workspace.onDidRenameFiles(e => this.OnRenameFiles(e));
+        vscode.workspace.onDidCreateFiles(e => this.OnCreateFiles(e));
+        vscode.workspace.onDidDeleteFiles(e => this.OnDeleteFiles(e));
     }
 
     private debouncedOnTextDocumentChanged = debounce(this._OnTextDocumentChanged, this.debouncedTime);
     private debouncedOnTextEditorSelectionChanged = debounce(this._OnTextEditorSelectionChanged, this.debouncedTime);
 
+    OnRenameFiles(event: vscode.FileRenameEvent) {
+        this._OnRenameFiles(event);
+    }
+
+    OnCreateFiles(event: vscode.FileCreateEvent) {
+        this._OnCreateFiles(event);
+    }
+
+    OnDeleteFiles(event: vscode.FileDeleteEvent) {
+        this._OnDeleteFiles(event);
+    }
+
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent) {
         this._OnWorkspaceFoldersChanged(event);
     }
+
 
     OnTextDocumentChanged(event: vscode.TextDocumentChangeEvent) {
         let uri = event.document.uri;
@@ -88,6 +114,25 @@ class VSCodeEventHandlerManager {
 
         this.debouncedOnTextEditorSelectionChanged(event);
     }
+
+    _OnCreateFiles(event: vscode.FileCreateEvent) {
+        this.handlers.get(VSCodeEvent.CreateFiles)?.forEach((listener) => {
+            listener.OnCreateFiles(event);
+        });
+    }
+
+    _OnDeleteFiles(event: vscode.FileDeleteEvent) {
+        this.handlers.get(VSCodeEvent.DeleteFiles)?.forEach((listener) => {
+            listener.OnDeleteFiles(event);
+        });
+    }
+
+    _OnRenameFiles(event: vscode.FileRenameEvent) {
+        this.handlers.get(VSCodeEvent.WorkspaceFoldersChanged)?.forEach((listener) => {
+            listener.OnRenameFiles(event);
+        });
+    }
+
 
     _OnTextDocumentChanged(event: vscode.TextDocumentChangeEvent) {
         this.handlers.get(VSCodeEvent.TextDocumentChanged)?.forEach((listener) => {
