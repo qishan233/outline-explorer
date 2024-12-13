@@ -14,7 +14,7 @@ export class FileItem {
 }
 
 
-async function isFile(uri: vscode.Uri): Promise<boolean | Error> {
+export async function isFile(uri: vscode.Uri): Promise<boolean | Error> {
     try {
         const stat = await vscode.workspace.fs.stat(uri);
         return stat.type === vscode.FileType.File;

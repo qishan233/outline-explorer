@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import { GetOutline, SymbolKind2IconId, getParentsOfDocumentSymbol } from './outline_info';
-import { FileItem, getFileEntriesInPath, getFileEntriesInDir, isInWorkspace } from './file_info';
+import { FileItem, getFileEntriesInPath, getFileEntriesInDir, isInWorkspace, isFile } from './file_info';
 import * as eventHandler from './listener';
 import * as Logger from './log';
 
@@ -128,7 +128,7 @@ class OutlineExplorerEntryFactory {
 
 
 // create file entries of uri and it's parents, if uri is out of workspaces, return empty
-async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<string, OutlineExplorerItem>): Promise<OutlineExplorerItem[]> {
+async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2OutlineExplorerFileItem: Map<string, OutlineExplorerItem>): Promise<OutlineExplorerItem[]> {
     let fileEntriesInPath = await getFileEntriesInPath(uri);
     if (!fileEntriesInPath) {
         return [];
@@ -138,8 +138,7 @@ async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<
     for (let i = 0; i < fileEntriesInPath.length; i++) {
         const fileEntry = fileEntriesInPath[i];
 
-        let existFileEntry = uri2FileEntry.get(fileEntry.uri.toString());
-
+        let existFileEntry = uri2OutlineExplorerFileItem.get(fileEntry.uri.toString());
         if (existFileEntry) {
             fileOutlineExplorerEntries.push(existFileEntry);
             continue;
@@ -149,7 +148,6 @@ async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<
         let item = new OutlineExplorerItem(fileEntry, undefined);
         item.parent = i === 0 ? undefined : fileOutlineExplorerEntries[i - 1];
 
-
         fileOutlineExplorerEntries.push(item);
     }
 
@@ -158,7 +156,7 @@ async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2FileEntry: Map<
             continue;
         }
 
-        uri2FileEntry.set(item.fileItem.uri.toString(), item);
+        uri2OutlineExplorerFileItem.set(item.fileItem.uri.toString(), item);
     }
     return fileOutlineExplorerEntries;
 }
@@ -257,11 +255,11 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         this.UpdateIgnoreFiles();
 
-        setTimeout(() => {
+        setTimeout(async () => {
             Logger.Info('First Refresh Begin');
 
-            this.refresh(undefined);
-            this.revealUri(vscode.window.activeTextEditor?.document.uri);
+            await this.refresh(undefined);
+            await this.revealUri(vscode.window.activeTextEditor?.document.uri);
 
             Logger.Info('First Refresh End');
         }, DelayFirstRefreshTime);
@@ -279,16 +277,20 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
     OnRenameFiles(event: vscode.FileRenameEvent) {
         for (let file of event.files) {
-            this.replaceOutlineEntry(file.oldUri, file.newUri);
+            this.replaceOutlineExplorerItem(file.oldUri, file.newUri);
         }
     }
 
     OnCreateFiles(event: vscode.FileCreateEvent) {
-
+        for (let file of event.files) {
+            this.addOutlineExplorerFileItem(file);
+        }
     }
 
     OnDeleteFiles(event: vscode.FileDeleteEvent) {
-
+        for (let file of event.files) {
+            this.removeOutlineExplorerItem(file);
+        }
     }
 
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
@@ -332,7 +334,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         this.treeView.reveal(entry, {
             select: true,
             focus: false,
-            expand: true
+            expand: false
         });
     }
 
@@ -400,21 +402,52 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         this.treeDataChangedEventEmitter.fire(entry);
     }
-    removeOutlineEntry(uri: vscode.Uri) {
-        let fileEntry = this.uri2OutlineExplorerFileItem.get(uri.toString());
-        if (fileEntry) {
-            for (let child of fileEntry.children ?? []) {
-                if (child.isFileEntry()) {
-                    this.removeOutlineEntry(child.fileItem.uri);
-                }
-            }
+
+    async addOutlineExplorerFileItem(uri: vscode.Uri) {
+        let items = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
+
+        if (items.length === 0) {
+            return;
         }
+
+        let item = items[items.length - 1];
+
+        if (item.parent) {
+            await this.getOutlineEntriesInDir(item.parent);
+        }
+
+
+        this.treeDataChangedEventEmitter.fire(item.parent);
+
+        this.revealUri(uri);
+    }
+    removeOutlineExplorerItem(uri: vscode.Uri) {
+        let fileEntry = this.uri2OutlineExplorerFileItem.get(uri.toString());
 
         this.uri2OutlineExplorerFileItem.delete(uri.toString());
         this.uri2OutlineItems.delete(uri.toString());
+
+        if (fileEntry) {
+            for (let child of fileEntry.children ?? []) {
+                if (child.isFileEntry()) {
+                    this.removeOutlineExplorerItem(child.fileItem.uri);
+                }
+            }
+            let parent = fileEntry.parent;
+            if (parent) {
+                parent.children = parent.children?.filter(item => item !== fileEntry);
+
+                console.log('removeOutlineExplorerItem', parent);
+
+                this.treeDataChangedEventEmitter.fire(parent);
+            }
+            console.log('removeOutlineExplorerItem fileEntry 已找到', fileEntry);
+        }
+
+        console.log('removeOutlineExplorerItem 已移除', uri);
     }
 
-    replaceOutlineEntry(oldUri: vscode.Uri, newUri: vscode.Uri) {
+    replaceOutlineExplorerItem(oldUri: vscode.Uri, newUri: vscode.Uri) {
         if (!(isInWorkspace(newUri) && isInWorkspace(oldUri))) {
             return;
         }
@@ -441,7 +474,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
         for (let removed of event.removed) {
-            this.removeOutlineEntry(removed.uri);
+            this.removeOutlineExplorerItem(removed.uri);
         }
 
         this.treeDataChangedEventEmitter.fire();
@@ -563,7 +596,12 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         let fileEntries = await getFileEntriesInDir(uri, ignoredUris);
 
         const outlineExplorerEntries = fileEntries.map(fileEntry => {
-            let item = new OutlineExplorerItem(fileEntry, undefined);
+            let item = this.uri2OutlineExplorerFileItem.get(fileEntry.uri.toString());
+
+            if (!item) {
+                item = new OutlineExplorerItem(fileEntry, undefined);
+            }
+
             item.parent = element;
 
             return item;
@@ -620,10 +658,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             await this.getOutlineEntriesInDir(workspaceFolderEntry);
 
             workspaceFolderItems.push(workspaceFolderEntry);
-        }
-
-        if (workspaceFolderItems.length === 1) {
-            return workspaceFolderItems[0].children ?? [];
         }
 
         return workspaceFolderItems;
