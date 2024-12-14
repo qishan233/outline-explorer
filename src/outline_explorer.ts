@@ -228,8 +228,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     private ignoreActiveEditorChange = false;
     private treeViewVisible = false;
 
-    outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel("outline-explorer");
-
     constructor(context: vscode.ExtensionContext) {
         super();
 
@@ -262,7 +260,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             Logger.Info('First Refresh Begin');
 
             await this.refresh(undefined);
-            
+
             Logger.Info('First Refresh End');
 
             if (activeEditor) {
