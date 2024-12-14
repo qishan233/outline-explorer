@@ -32,7 +32,31 @@ Selecting a symbol in the editor will also automatically update the selected ite
 
 ![Selection Update](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/selection-update-item.gif)
 
+### Monitor Workspace File Changes
+
+When creating, deleting, or renaming files in the workspace directory, the outline tree will automatically update:
+
+![Workspace Event](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/workspace-file-event.gif)
+
+### Refresh Outline
+
+In some scenarios (such as when the outline provider plugin that this extension depends on is not responding properly while loading outline information), outline information may be missing. In this case, you can manually trigger the loading of outline information through the "Refresh" command:
+
+![Refresh](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/refresh.gif)
+
 ## Release Notes
+
+### 0.0.2
+
+Added lazy loading mechanism to avoid issues with fetching outline information when the extension is activated;
+
+Added "Refresh" command to manually update the outline information of file;
+
+Added the ability to update the outline tree when monitoring workspace file changes;
+
+Changed the display of the outline tree when there is only one directory in the workspace;
+
+Improved some details and slightly increased code cleanliness (still far from enough);
 
 ### 0.0.1
 

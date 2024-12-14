@@ -32,7 +32,31 @@
 
 ![选中更新](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/selection-update-item.gif)
 
+### 监听工作区文件变化
+
+在工作区目录中新建、删除、重命名文件时，大纲树会自动更新：
+
+![workspace-event](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/workspace-file-event.gif)
+
+### 刷新大纲
+
+在某些场景下（如加载大纲信息时，本插件所依赖的大纲提供者插件尚无法正常响应请求）会出现大纲信息缺失的情况，此时可通过“刷新”命令手动触发大纲信息的加载：
+
+![refresh](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/refresh.gif)
+
 ## 发布说明
+
+### 0.0.2
+
+添加延迟初始化机制以避免插件激活时无法获取大纲信息的问题；
+
+添加“刷新”命令以手动更新文件的大纲信息；
+
+添加监控工作区文件变更时更新大纲树的能力；
+
+改变了在工作区仅有一个目录时大纲树的展示方式；
+
+完善了一些细节，稍微提高了一下代码整洁度（还远远不够）；
 
 ### 0.0.1
 

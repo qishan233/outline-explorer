@@ -214,7 +214,7 @@ function createOutlineEntryTreeItem(element: OutlineExplorerItem): vscode.TreeIt
     return treeItem;
 }
 
-const DelayFirstRefreshTime = 5000;
+const DelayFirstRefreshTime = 2000;
 
 export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEventHandler implements vscode.TreeDataProvider<OutlineExplorerItem>, eventHandler.VSCodeEventHandler {
     private treeDataChangedEventEmitter: vscode.EventEmitter<OutlineExplorerItem | OutlineExplorerItem[] | void | void | null | undefined> = new vscode.EventEmitter<OutlineExplorerItem[]>();
@@ -256,12 +256,21 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         this.UpdateIgnoreFiles();
 
         setTimeout(async () => {
+            let activeEditor = vscode.window.activeTextEditor;
+            let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
             Logger.Info('First Refresh Begin');
 
             await this.refresh(undefined);
-            await this.revealUri(vscode.window.activeTextEditor?.document.uri);
-
+            
             Logger.Info('First Refresh End');
+
+            if (activeEditor) {
+                await this.revealUri(activeEditor.document.uri);
+            } else if (workspaceFolder) {
+                await this.revealUri(workspaceFolder.uri);
+            }
+
         }, DelayFirstRefreshTime);
 
     }
