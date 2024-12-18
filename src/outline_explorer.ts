@@ -282,21 +282,56 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         }
     }
 
-    OnRenameFiles(event: vscode.FileRenameEvent) {
+    async OnRenameFiles(event: vscode.FileRenameEvent) {
+        let item: OutlineExplorerItem | undefined;
         for (let file of event.files) {
-            this.replaceOutlineExplorerItem(file.oldUri, file.newUri);
+            let deleteItem = this.removeOutlineExplorerItem(file.oldUri);
+            if (deleteItem) {
+                this.treeDataChangedEventEmitter.fire(deleteItem.parent);
+            }
+
+            let i = await this.addOutlineExplorerFileItem(file.newUri);
+            if (!item) {
+                item = i;
+            }
+
         }
+
+        if (!item) {
+            return;
+        }
+
+        this.treeDataChangedEventEmitter.fire(item.parent);
+
+        this.revealUri(item.fileItem.uri);
     }
 
-    OnCreateFiles(event: vscode.FileCreateEvent) {
+    async OnCreateFiles(event: vscode.FileCreateEvent) {
+        let item: OutlineExplorerItem | undefined;
         for (let file of event.files) {
-            this.addOutlineExplorerFileItem(file);
+            let i = await this.addOutlineExplorerFileItem(file);
+            if (i) {
+                this.treeDataChangedEventEmitter.fire(i.parent);
+            }
+
+            if (!item) {
+                item = i;
+            }
         }
+
+        if (!item) {
+            return;
+        }
+
+        this.revealUri(item.fileItem.uri);
     }
 
     OnDeleteFiles(event: vscode.FileDeleteEvent) {
         for (let file of event.files) {
-            this.removeOutlineExplorerItem(file);
+            let item = this.removeOutlineExplorerItem(file);
+            if (item) {
+                this.treeDataChangedEventEmitter.fire(item.parent);
+            }
         }
     }
 
@@ -410,7 +445,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         this.treeDataChangedEventEmitter.fire(entry);
     }
 
-    async addOutlineExplorerFileItem(uri: vscode.Uri) {
+    async addOutlineExplorerFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
         let items = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
 
         if (items.length === 0) {
@@ -423,12 +458,9 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             await this.getOutlineEntriesInDir(item.parent);
         }
 
-
-        this.treeDataChangedEventEmitter.fire(item.parent);
-
-        this.revealUri(uri);
+        return item;
     }
-    removeOutlineExplorerItem(uri: vscode.Uri) {
+    removeOutlineExplorerItem(uri: vscode.Uri): OutlineExplorerItem | undefined {
         let fileEntry = this.uri2OutlineExplorerFileItem.get(uri.toString());
 
         this.uri2OutlineExplorerFileItem.delete(uri.toString());
@@ -443,40 +475,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             let parent = fileEntry.parent;
             if (parent) {
                 parent.children = parent.children?.filter(item => item !== fileEntry);
-
-                console.log('removeOutlineExplorerItem', parent);
-
-                this.treeDataChangedEventEmitter.fire(parent);
             }
-            console.log('removeOutlineExplorerItem fileEntry 已找到', fileEntry);
         }
 
-        console.log('removeOutlineExplorerItem 已移除', uri);
-    }
-
-    replaceOutlineExplorerItem(oldUri: vscode.Uri, newUri: vscode.Uri) {
-        if (!(isInWorkspace(newUri) && isInWorkspace(oldUri))) {
-            return;
-        }
-
-        let outlineExplorerFileItem = this.uri2OutlineExplorerFileItem.get(oldUri.toString());
-        if (!outlineExplorerFileItem) {
-            return;
-        }
-
-        let fileItem = outlineExplorerFileItem.fileItem;
-        fileItem.uri = newUri;
-
-        this.uri2OutlineExplorerFileItem.delete(oldUri.toString());
-        this.uri2OutlineExplorerFileItem.set(newUri.toString(), outlineExplorerFileItem);
-
-        let outlineItems = this.uri2OutlineItems.get(oldUri.toString());
-        if (outlineItems) {
-            this.uri2OutlineItems.delete(oldUri.toString());
-            this.uri2OutlineItems.set(newUri.toString(), outlineItems);
-        }
-
-        this.treeDataChangedEventEmitter.fire(outlineExplorerFileItem);
+        return fileEntry;
     }
 
     OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
