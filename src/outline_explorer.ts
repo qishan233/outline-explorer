@@ -697,7 +697,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
     async refresh(element: OutlineExplorerItem | undefined): Promise<void> {
         if (element) {
-            await this.resetElement(element);
+            await this.resetFileElement(element);
         }
 
         this.treeDataChangedEventEmitter.fire(element);
@@ -712,7 +712,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
     }
 
-    async resetElement(element: OutlineExplorerItem) {
+    async resetFileElement(element: OutlineExplorerItem) {
         this.uri2OutlineItems.delete(element.fileItem.uri.toString());
         for (let child of element.children ?? []) {
             child.parent = undefined;

@@ -47,20 +47,13 @@
       "outline-explorer": [
         {
           "id": "outline-explorer",
-          "name": "Outline Explorer",
+          "name": "%extension.name%",
           "canToggleVisibility": true,
           "icon": "resources/view-icon.svg"
         }
       ]
     },
     "menus": {
-      "view/title": [
-        {
-          "command": "outline-explorer.refresh",
-          "when": "view == outline-explorer",
-          "group": "navigation"
-        }
-      ],
       "view/item/context": [
         {
           "command": "outline-explorer.refresh",
