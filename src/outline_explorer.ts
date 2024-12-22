@@ -1,17 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { GetOutline, SymbolKind2IconId, getParentsOfDocumentSymbol } from './outline_info';
-import { FileItem, getFileEntriesInPath, getFileEntriesInDir, isInWorkspace, isFile } from './file_info';
+import { GetOutline, SymbolKind2IconId, getParentsOfDocumentSymbol, OutlineItem } from './outline';
+import { FileItem, getFileEntriesInPath, getFileEntriesInDir, isInWorkspace, isFile } from './file';
 import * as eventHandler from './listener';
 import * as Logger from './log';
-
-export class OutlineItem {
-    documentSymbol: vscode.DocumentSymbol;
-    constructor(documentSymbol: vscode.DocumentSymbol) {
-        this.documentSymbol = documentSymbol;
-    }
-}
 
 
 function GetMatchedEntryOfRange(entry: OutlineExplorerItem, range: vscode.Range): OutlineExplorerItem | undefined {
@@ -126,7 +119,6 @@ class OutlineExplorerEntryFactory {
 }
 
 
-
 // create file entries of uri and it's parents, if uri is out of workspaces, return empty
 async function getOrCreateFileEntriesInPath(uri: vscode.Uri, uri2OutlineExplorerFileItem: Map<string, OutlineExplorerItem>): Promise<OutlineExplorerItem[]> {
     let fileEntriesInPath = await getFileEntriesInPath(uri);
@@ -216,25 +208,22 @@ function createOutlineEntryTreeItem(element: OutlineExplorerItem): vscode.TreeIt
 
 const DelayFirstRefreshTime = 2000;
 
-export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEventHandler implements vscode.TreeDataProvider<OutlineExplorerItem>, eventHandler.VSCodeEventHandler {
-    private treeDataChangedEventEmitter: vscode.EventEmitter<OutlineExplorerItem | OutlineExplorerItem[] | void | void | null | undefined> = new vscode.EventEmitter<OutlineExplorerItem[]>();
-    readonly onDidChangeTreeData: vscode.Event<OutlineExplorerItem | OutlineExplorerItem[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
-
-    private uri2OutlineItems: Map<string, OutlineExplorerItem[]> = new Map();
-    private uri2OutlineExplorerFileItem: Map<string, OutlineExplorerItem> = new Map();
-    private workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
-
+export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler {
     private treeView: vscode.TreeView<OutlineExplorerItem>;
-    private ignoreActiveEditorChange = false;
+    private dataProvider: OutlineExplorerDataProvider;
+
     private treeViewVisible = false;
+    private ignoreActiveEditorChange = false;
 
     constructor(context: vscode.ExtensionContext) {
         super();
 
-        this.treeView = vscode.window.createTreeView('outline-explorer', { treeDataProvider: this });
-        this.treeView.onDidChangeVisibility(e => this.OnVisibilityChanged(e));
+        this.dataProvider = new OutlineExplorerDataProvider(context);
+
+        this.treeView = vscode.window.createTreeView('outline-explorer', { treeDataProvider: this.dataProvider });
 
         context.subscriptions.push(this.treeView);
+
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.item-clicked', async (item) => {
             await this.onclick(item);
         }, this));
@@ -242,7 +231,10 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             this.refresh(element);
         }, this));
 
+        this.treeView.onDidChangeVisibility(e => this.OnVisibilityChanged(e));
+
         const eventHandlerManager = new eventHandler.VSCodeEventHandlerManager();
+
         eventHandlerManager.RegisterEventHandler(eventHandler.VSCodeEvent.TextDocumentChanged, this);
         eventHandlerManager.RegisterEventHandler(eventHandler.VSCodeEvent.ActiveTextEditorChanged, this);
         eventHandlerManager.RegisterEventHandler(eventHandler.VSCodeEvent.TextEditorSelectionChanged, this);
@@ -251,46 +243,21 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         eventHandlerManager.RegisterEventHandler(eventHandler.VSCodeEvent.CreateFiles, this);
         eventHandlerManager.RegisterEventHandler(eventHandler.VSCodeEvent.DeleteFiles, this);
 
-        this.UpdateIgnoreFiles();
-
-        setTimeout(async () => {
-            let activeEditor = vscode.window.activeTextEditor;
-            let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-            Logger.Info('First Refresh Begin');
-
-            await this.refresh(undefined);
-
-            Logger.Info('First Refresh End');
-
-            if (activeEditor) {
-                await this.revealUri(activeEditor.document.uri);
-            } else if (workspaceFolder) {
-                await this.revealUri(workspaceFolder.uri);
-            }
-
-        }, DelayFirstRefreshTime);
-
     }
 
-    async UpdateIgnoreFiles() {
-        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
-
-        for (let folder of workspaceFolders) {
-            let gitIgnoreUri = vscode.Uri.file(path.join(folder.uri.fsPath, '.git'));
-            this.workspaceFolder2IgnoreUris.set(folder.uri.toString(), [gitIgnoreUri]);
-        }
+    OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
+        this.treeViewVisible = e.visible;
     }
 
     async OnRenameFiles(event: vscode.FileRenameEvent) {
         let item: OutlineExplorerItem | undefined;
         for (let file of event.files) {
-            let deleteItem = this.removeOutlineExplorerItem(file.oldUri);
+            let deleteItem = this.dataProvider.removeOutlineExplorerItem(file.oldUri);
             if (deleteItem) {
-                this.treeDataChangedEventEmitter.fire(deleteItem.parent);
+                this.dataProvider.DataChanged(deleteItem.parent);
             }
 
-            let i = await this.addOutlineExplorerFileItem(file.newUri);
+            let i = await this.dataProvider.addOutlineExplorerFileItem(file.newUri);
             if (!item) {
                 item = i;
             }
@@ -301,7 +268,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             return;
         }
 
-        this.treeDataChangedEventEmitter.fire(item.parent);
+        this.dataProvider.DataChanged(item.parent);
 
         this.revealUri(item.fileItem.uri);
     }
@@ -309,9 +276,9 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
     async OnCreateFiles(event: vscode.FileCreateEvent) {
         let item: OutlineExplorerItem | undefined;
         for (let file of event.files) {
-            let i = await this.addOutlineExplorerFileItem(file);
+            let i = await this.dataProvider.addOutlineExplorerFileItem(file);
             if (i) {
-                this.treeDataChangedEventEmitter.fire(i.parent);
+                this.dataProvider.DataChanged(i.parent);
             }
 
             if (!item) {
@@ -328,34 +295,11 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
     OnDeleteFiles(event: vscode.FileDeleteEvent) {
         for (let file of event.files) {
-            let item = this.removeOutlineExplorerItem(file);
+            let item = this.dataProvider.removeOutlineExplorerItem(file);
             if (item) {
-                this.treeDataChangedEventEmitter.fire(item.parent);
+                this.dataProvider.DataChanged(item.parent);
             }
         }
-    }
-
-    OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
-        this.treeViewVisible = e.visible;
-    }
-
-
-    async OnActiveTextEditorChanged(e: vscode.TextEditor | undefined) {
-        if (!e) {
-            return;
-        }
-
-        if (this.ignoreActiveEditorChange) {
-            this.ignoreActiveEditorChange = false;
-            return;
-        }
-
-        if (!this.treeViewVisible) {
-            return;
-        }
-
-        const uri = e.document.uri;
-        await this.revealUri(uri);
     }
 
     async revealUri(uri: vscode.Uri | undefined) {
@@ -363,20 +307,15 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             return;
         }
 
-        let entry = this.uri2OutlineExplorerFileItem.get(uri.toString());
+        let entry = await this.dataProvider.getFileItem(uri);
         if (!entry) {
-            const entries = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
-            if (entries.length === 0) {
-                return;
-            }
-
-            entry = entries[entries.length - 1];
+            return;
         }
 
         this.treeView.reveal(entry, {
             select: true,
             focus: false,
-            expand: false
+            expand: true
         });
     }
 
@@ -391,22 +330,9 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             return;
         }
 
-        const uri = e.textEditor.document.uri;
-        let fileEntry = this.uri2OutlineExplorerFileItem.get(uri.toString());
-        let outlineEntries = this.uri2OutlineItems.get(uri.toString());
-
+        let outlineEntries = await this.dataProvider.getOutlineItems(e.textEditor.document.uri);
         if (!outlineEntries) {
-            // create file entry
-            if (!fileEntry) {
-                let fileEntries = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
-                if (!fileEntries || fileEntries.length === 0) {
-                    return;
-                }
-
-                fileEntry = fileEntries[fileEntries.length - 1];
-            }
-
-            outlineEntries = await this.getOutlineEntries(fileEntry);
+            return;
         }
 
         for (let outlineEntry of outlineEntries) {
@@ -430,20 +356,185 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
 
         const uri = e.document.uri;
 
+        let entry = await this.dataProvider.getFileItem(uri);
+        if (!entry) {
+            return;
+        }
+
+        await this.dataProvider.loadOutlineEntries(entry);
+
+        this.dataProvider.DataChanged(entry);
+    }
+
+    OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
+        for (let removed of event.removed) {
+            this.dataProvider.removeOutlineExplorerItem(removed.uri);
+        }
+
+        this.dataProvider.DataChanged();
+    }
+
+    async OnActiveTextEditorChanged(e: vscode.TextEditor | undefined) {
+        if (!e) {
+            return;
+        }
+
+        if (this.ignoreActiveEditorChange) {
+            this.ignoreActiveEditorChange = false;
+            return;
+        }
+
+        if (!this.treeViewVisible) {
+            return;
+        }
+
+        const uri = e.document.uri;
+        await this.revealUri(uri);
+    }
+
+    async onclick(item: OutlineExplorerItem) {
+        if (!item) {
+            return;
+        }
+
+        if (!(item.isOutlineEntry() && item.outlineItem)) {
+            return;
+        }
+
+        const documentSymbol = item.outlineItem.documentSymbol;
+        const selection = new vscode.Selection(documentSymbol.selectionRange.start, documentSymbol.selectionRange.start);
+
+        let targetEditor = vscode.window.activeTextEditor;
+        let document = targetEditor?.document;
+
+        if (!document || document.uri.toString() !== item.fileItem.uri.toString()) {
+            document = await vscode.workspace.openTextDocument(item.fileItem.uri.path);
+        }
+
+        this.ignoreActiveEditorChange = true;
+        await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
+        return;
+    }
+
+    async refresh(element: OutlineExplorerItem | undefined): Promise<void> {
+        await this.dataProvider.refresh(element);
+
+        if (element) {
+            this.treeView.reveal(element, {
+                select: true,
+                focus: false,
+                expand: true
+            });
+        }
+
+    }
+
+    async resetFileElement(element: OutlineExplorerItem) {
+        await this.dataProvider.resetFileElement(element);
+    }
+
+    Init() {
+        setTimeout(async () => {
+            let activeEditor = vscode.window.activeTextEditor;
+            let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+            Logger.Info('First Refresh Begin');
+
+            await this.refresh(undefined);
+
+            Logger.Info('First Refresh End');
+
+            if (activeEditor) {
+                await this.revealUri(activeEditor.document.uri);
+            } else if (workspaceFolder) {
+                await this.revealUri(workspaceFolder.uri);
+            }
+
+        }, DelayFirstRefreshTime);
+    }
+
+}
+
+export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<OutlineExplorerItem> {
+    private treeDataChangedEventEmitter: vscode.EventEmitter<OutlineExplorerItem | OutlineExplorerItem[] | void | void | null | undefined> = new vscode.EventEmitter<OutlineExplorerItem[]>();
+    readonly onDidChangeTreeData: vscode.Event<OutlineExplorerItem | OutlineExplorerItem[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
+
+    private uri2OutlineItems: Map<string, OutlineExplorerItem[]> = new Map();
+    private uri2OutlineExplorerFileItem: Map<string, OutlineExplorerItem> = new Map();
+    private workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
+
+
+    constructor(context: vscode.ExtensionContext) {
+
+        this.UpdateIgnoreFiles();
+
+    }
+
+    async getOutlineItems(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
+        let fileEntry = this.uri2OutlineExplorerFileItem.get(uri.toString());
+        let outlineEntries = this.uri2OutlineItems.get(uri.toString());
+
+        if (!outlineEntries) {
+            // create file entry
+            if (!fileEntry) {
+                let fileEntries = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
+                if (!fileEntries || fileEntries.length === 0) {
+                    return;
+                }
+
+                fileEntry = fileEntries[fileEntries.length - 1];
+            }
+
+            outlineEntries = await this.loadOutlineEntries(fileEntry);
+        }
+
+        return outlineEntries;
+    }
+
+    async getFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
         let entry = this.uri2OutlineExplorerFileItem.get(uri.toString());
         if (!entry) {
-            let entries = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
+            const entries = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
             if (entries.length === 0) {
                 return;
             }
+
             entry = entries[entries.length - 1];
         }
 
-
-        this.getOutlineEntries(entry);
-
-        this.treeDataChangedEventEmitter.fire(entry);
+        return entry;
     }
+
+    async resetFileElement(element: OutlineExplorerItem) {
+        this.uri2OutlineItems.delete(element.fileItem.uri.toString());
+        for (let child of element.children ?? []) {
+            child.parent = undefined;
+        }
+        await this.loadOutlineEntries(element);
+    }
+
+    async refresh(element: OutlineExplorerItem | undefined): Promise<void> {
+        if (element) {
+            await this.resetFileElement(element);
+        }
+
+        this.DataChanged(element);
+    }
+
+
+    DataChanged(item: OutlineExplorerItem | OutlineExplorerItem[] | void | null | undefined) {
+        this.treeDataChangedEventEmitter.fire(item);
+    }
+
+    async UpdateIgnoreFiles() {
+        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+
+        for (let folder of workspaceFolders) {
+            let gitIgnoreUri = vscode.Uri.file(path.join(folder.uri.fsPath, '.git'));
+            this.workspaceFolder2IgnoreUris.set(folder.uri.toString(), [gitIgnoreUri]);
+        }
+    }
+
 
     async addOutlineExplorerFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
         let items = await getOrCreateFileEntriesInPath(uri, this.uri2OutlineExplorerFileItem);
@@ -481,14 +572,6 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         return fileEntry;
     }
 
-    OnWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
-        for (let removed of event.removed) {
-            this.removeOutlineExplorerItem(removed.uri);
-        }
-
-        this.treeDataChangedEventEmitter.fire();
-    }
-
     getTreeItem(element: OutlineExplorerItem): vscode.TreeItem {
         if (element.isFileEntry()) {
             return createFileEntryTreeItem(element);
@@ -524,7 +607,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
             let outlineExplorerItems = this.uri2OutlineItems.get(uri.toString());
 
             if (!outlineExplorerItems) {
-                outlineExplorerItems = await this.getOutlineEntries(element);
+                outlineExplorerItems = await this.loadOutlineEntries(element);
             }
 
             const outlineEntries = outlineExplorerItems.map(item => item.outlineItem).filter(entry => entry !== undefined);
@@ -576,7 +659,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         return result;
     }
 
-    async getOutlineEntries(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> {
+    async loadOutlineEntries(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> {
         if (element.fileItem.type !== vscode.FileType.File) {
             return [];
         }
@@ -636,7 +719,7 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
                 if (element.fileItem.type === vscode.FileType.Directory) {
                     return this.getOutlineEntriesInDir(element);
                 } else {
-                    return this.getOutlineEntries(element);
+                    return this.loadOutlineEntries(element);
                 }
             } else if (element.outlineItem) {
                 return [];
@@ -670,53 +753,5 @@ export class OutlineExplorerTreeDataProvider extends eventHandler.BaseVSCodeEven
         }
 
         return workspaceFolderItems;
-    }
-    async onclick(item: OutlineExplorerItem) {
-        if (!item) {
-            return;
-        }
-
-        if (!(item.isOutlineEntry() && item.outlineItem)) {
-            return;
-        }
-
-        const documentSymbol = item.outlineItem.documentSymbol;
-        const selection = new vscode.Selection(documentSymbol.selectionRange.start, documentSymbol.selectionRange.start);
-
-        let targetEditor = vscode.window.activeTextEditor;
-        let document = targetEditor?.document;
-
-        if (!document || document.uri.toString() !== item.fileItem.uri.toString()) {
-            document = await vscode.workspace.openTextDocument(item.fileItem.uri.path);
-        }
-
-        this.ignoreActiveEditorChange = true;
-        await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
-        return;
-    }
-
-    async refresh(element: OutlineExplorerItem | undefined): Promise<void> {
-        if (element) {
-            await this.resetFileElement(element);
-        }
-
-        this.treeDataChangedEventEmitter.fire(element);
-
-        if (element) {
-            this.treeView.reveal(element, {
-                select: true,
-                focus: false,
-                expand: true
-            });
-        }
-
-    }
-
-    async resetFileElement(element: OutlineExplorerItem) {
-        this.uri2OutlineItems.delete(element.fileItem.uri.toString());
-        for (let child of element.children ?? []) {
-            child.parent = undefined;
-        }
-        await this.getOutlineEntries(element);
     }
 }

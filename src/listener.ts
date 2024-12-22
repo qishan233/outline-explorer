@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { isInWorkspace } from './file_info';
+import { isInWorkspace } from './file';
 
 export {
     VSCodeEventHandler,
