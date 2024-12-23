@@ -57,7 +57,7 @@
       "view/item/context": [
         {
           "command": "outline-explorer.refresh",
-          "when": "view == outline-explorer && viewItem == file",
+          "when": "view == outline-explorer && (viewItem == file || viewItem == folder)",
           "group": "navigation"
         }
       ]
