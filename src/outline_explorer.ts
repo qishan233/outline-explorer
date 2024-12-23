@@ -269,28 +269,16 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
         }
 
         this.dataProvider.DataChanged(item.parent);
-
-        this.revealUri(item.fileItem.uri);
     }
 
     async OnCreateFiles(event: vscode.FileCreateEvent) {
-        let item: OutlineExplorerItem | undefined;
         for (let file of event.files) {
             let i = await this.dataProvider.addOutlineExplorerFileItem(file);
             if (i) {
                 this.dataProvider.DataChanged(i.parent);
             }
-
-            if (!item) {
-                item = i;
-            }
         }
 
-        if (!item) {
-            return;
-        }
-
-        this.revealUri(item.fileItem.uri);
     }
 
     OnDeleteFiles(event: vscode.FileDeleteEvent) {
@@ -304,6 +292,10 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
 
     async revealUri(uri: vscode.Uri | undefined) {
         if (!uri) {
+            return;
+        }
+
+        if (!this.treeViewVisible) {
             return;
         }
 
@@ -384,9 +376,6 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             return;
         }
 
-        if (!this.treeViewVisible) {
-            return;
-        }
 
         const uri = e.document.uri;
         await this.revealUri(uri);
