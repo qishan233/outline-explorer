@@ -46,6 +46,14 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ## Release Notes
 
+### 0.0.3
+
+Added the ability to refresh directory item in Outline Explorer;
+
+Tree view will not get focus when files are created;
+
+Tree view will be correctly updated when moving files in vscode;
+
 ### 0.0.2
 
 Added lazy loading mechanism to avoid issues with fetching outline information when the extension is activated;

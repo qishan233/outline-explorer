@@ -2,7 +2,7 @@
   "name": "outline-explorer",
   "displayName": "Outline Explorer",
   "description": "This extension supports displaying outlines in a manner similar to the explorer, inspired by the \"Show Member\" feature in JetBrains IDEs.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "resources/extension-icon.png",
   "publisher": "qishan233",
   "license": "SEE LICENSE IN LICENSE",

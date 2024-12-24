@@ -2,6 +2,20 @@
 
 All notable changes to the "outline-explorer" extension will be documented in this file.
 
+## [0.0.3] - 2024-12-24
+
+### Added
+
+1. Added the ability to refresh directory item in Outline Explorer;
+
+### Changed
+
+1. Tree view will not get focus when files are created;
+
+### Fixed
+
+1. Tree view will be correctly updated when moving files in vscode;
+
 ## [0.0.2] - 2024-12-14
 
 Added lazy loading mechanism to avoid issues with fetching outline information when the extension is activated;
