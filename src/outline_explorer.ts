@@ -737,7 +737,12 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
             }
 
             if (element.isFileEntry()) {
-                element.getChildren(this.cache, this.getIgnoredUris(element.fileItem.uri));
+                let children = await element.getChildren(this.cache, this.getIgnoredUris(element.fileItem.uri));
+                if (!children) {
+                    return [];
+                }
+
+                return children;
             } else if (element.isOutlineEntry()) {
                 return [];
             }
