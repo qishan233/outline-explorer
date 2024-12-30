@@ -46,6 +46,10 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ## Release Notes
 
+### 0.0.4
+
+Added the feature that sort outlines by their positions in the document;
+
 ### 0.0.3
 
 Added the ability to refresh directory item in Outline Explorer;
