@@ -257,22 +257,6 @@ class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         return entries;
     }
 
-    //     static documentSymbol2OutlineEntry(documentSymbol: vscode.DocumentSymbol, parent: OutlineExplorerItem): OutlineExplorerOutlineItem {
-    //         const result = OutlineExplorerOutlineItemFactory.NewByDocumentSymbol(documentSymbol, parent);
-
-    //         if (documentSymbol.children.length > 0) {
-    //             result.children = [];
-    //             let p = result;
-    //             for (let child of documentSymbol.children) {
-    //                 let childEntry = OutlineExplorerOutlineItem.documentSymbol2OutlineEntry(child, p);
-    //                 result.children.push(childEntry);
-    //                 p = childEntry;
-    //             }
-    //         }
-
-    //         return result;
-    //     }
-
 }
 
 

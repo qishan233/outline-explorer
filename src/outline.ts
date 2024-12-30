@@ -15,44 +15,41 @@ export async function GetOutline(uri: vscode.Uri): Promise<vscode.DocumentSymbol
     if (!results) {
         return [];
     }
-
-    if (uri.toString().indexOf('facade.ts') > 0) {
-        console.log('before results:', results);
-    }
-
-
-    for (let result of results) {
-        if (!result.children) {
-            continue;
-        }
-        result.children.sort((a, b) => {
-            let asl = a.selectionRange.start.line;
-            let bsl = b.selectionRange.start.line;
-
-            if (asl < bsl) {
-                return -1;
-            } else if (asl > bsl) {
-                return 1;
-            } else {
-                let asc = a.selectionRange.start.character;
-                let bsc = b.selectionRange.start.character;
-
-                if (asc < bsc) {
-                    return -1;
-                } else if (asc > bsc) {
-                    return 1;
-                }
-
-                return 0;
-            }
-        });
-    }
-
-    if (uri.toString().indexOf('facade.ts') > 0) {
-        console.log('after results:', results);
-    }
+    
+    results = sortDocumentSymbols(results);
 
     return results;
+}
+
+function sortDocumentSymbols(documentSymbols: vscode.DocumentSymbol[]): vscode.DocumentSymbol[] {
+    documentSymbols.sort((a, b) => {
+        let asl = a.selectionRange.start.line;
+        let bsl = b.selectionRange.start.line;
+
+        if (asl < bsl) {
+            return -1;
+        } else if (asl > bsl) {
+            return 1;
+        } else {
+            let asc = a.selectionRange.start.character;
+            let bsc = b.selectionRange.start.character;
+
+            if (asc < bsc) {
+                return -1;
+            } else if (asc > bsc) {
+                return 1;
+            }
+
+            return 0;
+        }
+    });
+    for (let documentSymbol of documentSymbols) {
+        if (documentSymbol.children) {
+            documentSymbol.children = sortDocumentSymbols(documentSymbol.children);
+        }
+    }
+
+    return documentSymbols;
 }
 
 export const SymbolKind2IconId = new Map<vscode.SymbolKind, string>([
