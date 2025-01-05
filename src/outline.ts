@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export async function GetOutline(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
+export async function GetDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
     if (!uri) {
         if (vscode.window.activeTextEditor) {
             uri = vscode.window.activeTextEditor.document.uri;
@@ -15,7 +15,7 @@ export async function GetOutline(uri: vscode.Uri): Promise<vscode.DocumentSymbol
     if (!results) {
         return [];
     }
-    
+
     results = sortDocumentSymbols(results);
 
     return results;
@@ -98,16 +98,16 @@ function isDocumentSymbolEqual(a: vscode.DocumentSymbol, b: vscode.DocumentSymbo
         && a.selectionRange.isEqual(b.selectionRange);
 }
 
-export function getParentsOfDocumentSymbol(entries: OutlineItem[], targetDocumentSymbol: vscode.DocumentSymbol): OutlineItem[] | undefined {
-    for (let entry of entries) {
-        if (isDocumentSymbolEqual(entry.documentSymbol, targetDocumentSymbol)) {
+export function getParentsOfDocumentSymbol(items: OutlineItem[], targetDocumentSymbol: vscode.DocumentSymbol): OutlineItem[] | undefined {
+    for (let item of items) {
+        if (isDocumentSymbolEqual(item.documentSymbol, targetDocumentSymbol)) {
             return [];
         }
 
-        if (entry.documentSymbol.children) {
-            let parents = getParentsOfDocumentSymbol(entry.documentSymbol.children.map(child => ({ documentSymbol: child })), targetDocumentSymbol);
+        if (item.documentSymbol.children) {
+            let parents = getParentsOfDocumentSymbol(item.documentSymbol.children.map(child => ({ documentSymbol: child })), targetDocumentSymbol);
             if (parents) {
-                return [entry, ...parents];
+                return [item, ...parents];
             }
         }
     }
