@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import * as eventHandler from './listener';
 import * as Logger from './log';
-import { OutlineExplorerItem, OutlineExplorerFileItem, OutlineExplorerOutlineItem, Uri2OutlineExplorerItemIndex } from './item';
+import { OutlineExplorerItem, OutlineExplorerItemType, OutlineExplorerFileItem, OutlineExplorerOutlineItem, Uri2OutlineExplorerItemIndex } from './item';
 
 
 const DelayFirstRefreshTime = 2000;
@@ -196,7 +196,7 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             return;
         }
 
-        if (item.isOutlineItem()) {
+        if (item.getItemType() === OutlineExplorerItemType.Outline) {
             this.ignoreActiveEditorChange = true;
         }
 
@@ -347,7 +347,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
         if (fileItem) {
             for (let child of fileItem.children ?? []) {
-                if (child.isFileItem()) {
+                if (child.getItemType() === OutlineExplorerItemType.File) {
                     this.removeOutlineExplorerItem(child.fileItem.uri);
                 }
             }
@@ -382,14 +382,15 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
                 return element.children;
             }
 
-            if (element.isFileItem()) {
+            let itemType = element.getItemType();
+            if (itemType === OutlineExplorerItemType.File) {
                 let children = await element.getChildren(this.cache, this.getIgnoredUris(element.fileItem.uri));
                 if (!children) {
                     return [];
                 }
 
                 return children;
-            } else if (element.isOutlineItem()) {
+            } else if (itemType === OutlineExplorerItemType.Outline) {
                 return [];
             }
 

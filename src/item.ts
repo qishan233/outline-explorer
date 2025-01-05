@@ -4,12 +4,10 @@ import { GetDocumentSymbols, SymbolKind2IconId, getParentsOfDocumentSymbol, Outl
 import { FileItem, getFileItemsInPath, getFileItemsInDir } from './file';
 import * as Logger from './log';
 
-
-export class Uri2OutlineExplorerItemIndex {
-    uri2FileItem: Map<string, OutlineExplorerFileItem> = new Map();
-    uri2OutlineItems: Map<string, OutlineExplorerOutlineItem[]> = new Map();
+export enum OutlineExplorerItemType {
+    File,
+    Outline
 }
-
 
 export interface OutlineExplorerItem {
     fileItem: FileItem;
@@ -19,9 +17,7 @@ export interface OutlineExplorerItem {
     getChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined>;
     getParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined>;
     getTreeItem(): vscode.TreeItem;
-
-    isFileItem(): boolean;
-    isOutlineItem(): boolean;
+    getItemType(): OutlineExplorerItemType;
 
     onClick(): void;
 }
@@ -37,12 +33,8 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
         this.fileItem = new FileItem(uri, type);
     }
 
-    isFileItem(): boolean {
-        return true;
-    }
-
-    isOutlineItem(): boolean {
-        return false;
+    getItemType(): OutlineExplorerItemType {
+        return OutlineExplorerItemType.File;
     }
 
     onClick() {
@@ -161,12 +153,8 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         }
     }
 
-    isFileItem(): boolean {
-        return false;
-    }
-
-    isOutlineItem(): boolean {
-        return true;
+    getItemType(): OutlineExplorerItemType {
+        return OutlineExplorerItemType.Outline;
     }
 
     async onClick() {
@@ -286,7 +274,11 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
         return items;
     }
+}
 
+export class Uri2OutlineExplorerItemIndex {
+    uri2FileItem: Map<string, OutlineExplorerFileItem> = new Map();
+    uri2OutlineItems: Map<string, OutlineExplorerOutlineItem[]> = new Map();
 }
 
 
@@ -301,9 +293,11 @@ function NewTreeItemFactory(): TreeItemFactory {
 
 class TreeItemFactoryImpl implements TreeItemFactory {
     Create(element: OutlineExplorerItem): vscode.TreeItem {
-        if (element.isFileItem()) {
+        let itemType = element.getItemType();
+
+        if (itemType === OutlineExplorerItemType.File) {
             return this.fromOutlineExplorerFileItem(element as OutlineExplorerFileItem);
-        } else if (element.isOutlineItem()) {
+        } else if (itemType === OutlineExplorerItemType.Outline) {
             return this.fromOutlineExplorerOutlineItem(element as OutlineExplorerOutlineItem);
         }
 
