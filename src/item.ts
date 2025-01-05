@@ -50,7 +50,7 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
     }
 
     getTreeItem(): vscode.TreeItem {
-        return this.treeItemFactory.FromOutlineExplorerFileItem(this);
+        return this.treeItemFactory.Create(this);
     }
 
     async getChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined> {
@@ -186,7 +186,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
     }
 
     getTreeItem(): vscode.TreeItem {
-        return this.treeItemFactory.FromOutlineExplorerOutlineItem(this);
+        return this.treeItemFactory.Create(this);
     }
 
     async getChildren(): Promise<OutlineExplorerItem[] | undefined> {
@@ -291,8 +291,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
 
 interface TreeItemFactory {
-    FromOutlineExplorerFileItem(element: OutlineExplorerFileItem): vscode.TreeItem;
-    FromOutlineExplorerOutlineItem(element: OutlineExplorerOutlineItem): vscode.TreeItem;
+    Create(element: OutlineExplorerItem): vscode.TreeItem;
 }
 
 function NewTreeItemFactory(): TreeItemFactory {
@@ -301,7 +300,18 @@ function NewTreeItemFactory(): TreeItemFactory {
 
 
 class TreeItemFactoryImpl implements TreeItemFactory {
-    FromOutlineExplorerFileItem(element: OutlineExplorerFileItem): vscode.TreeItem {
+    Create(element: OutlineExplorerItem): vscode.TreeItem {
+        if (element.isFileItem()) {
+            return this.fromOutlineExplorerFileItem(element as OutlineExplorerFileItem);
+        } else if (element.isOutlineItem()) {
+            return this.fromOutlineExplorerOutlineItem(element as OutlineExplorerOutlineItem);
+        }
+
+        Logger.Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ', element);
+        throw new Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ');
+    }
+
+    fromOutlineExplorerFileItem(element: OutlineExplorerFileItem): vscode.TreeItem {
         if (!element.fileItem) {
             Logger.Error('createFileItem TreeItem Invalid OutlineExploreItem ');
             throw new Error('createFileItem TreeItem Invalid OutlineExploreItem ');
@@ -328,7 +338,7 @@ class TreeItemFactoryImpl implements TreeItemFactory {
         return treeItem;
     }
 
-    FromOutlineExplorerOutlineItem(element: OutlineExplorerOutlineItem): vscode.TreeItem {
+    fromOutlineExplorerOutlineItem(element: OutlineExplorerOutlineItem): vscode.TreeItem {
         if (!element.outlineItem || !element.outlineItem.documentSymbol) {
             Logger.Error('createOutlineItem TreeItem Invalid OutlineExploreItem ', element);
             throw new Error('createOutlineItem TreeItem Invalid OutlineExploreItem ');
