@@ -14,12 +14,12 @@ export interface OutlineExplorerItem {
     parent: OutlineExplorerItem | undefined;
     children: OutlineExplorerItem[] | undefined;
 
-    getChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined>;
-    getParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined>;
-    getTreeItem(): vscode.TreeItem;
-    getItemType(): OutlineExplorerItemType;
+    GetChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined>;
+    GetParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined>;
+    GetTreeItem(): vscode.TreeItem;
+    GetItemType(): OutlineExplorerItemType;
 
-    onClick(): void;
+    OnClick(): void;
 }
 
 export class OutlineExplorerFileItem implements OutlineExplorerItem {
@@ -33,24 +33,24 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
         this.fileItem = new FileItem(uri, type);
     }
 
-    getItemType(): OutlineExplorerItemType {
+    GetItemType(): OutlineExplorerItemType {
         return OutlineExplorerItemType.File;
     }
 
-    onClick() {
+    OnClick() {
         vscode.commands.executeCommand('vscode.open', this.fileItem.uri);
     }
 
-    getTreeItem(): vscode.TreeItem {
+    GetTreeItem(): vscode.TreeItem {
         return this.treeItemFactory.Create(this);
     }
 
-    async getChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined> {
+    async GetChildren(index: Uri2OutlineExplorerItemIndex, ignoredUri: vscode.Uri[]): Promise<OutlineExplorerItem[] | undefined> {
         let children: OutlineExplorerItem[] | undefined = undefined;
         if (this.fileItem.type === vscode.FileType.Directory) {
-            children = await OutlineExplorerFileItem.loadItemsInDir(this, ignoredUri, index);
+            children = await OutlineExplorerFileItem.LoadItemsInDir(this, ignoredUri, index);
         } else {
-            children = await OutlineExplorerOutlineItem.loadOutlineItems(this, index);
+            children = await OutlineExplorerOutlineItem.LoadOutlineItems(this, index);
         }
 
         this.children = children;
@@ -58,9 +58,9 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
         return this.children;
     }
 
-    async getParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined> {
+    async GetParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined> {
         const uri = this.fileItem.uri;
-        let fileItems = await OutlineExplorerFileItem.loadFileItemsInPath(uri, index.uri2FileItem);
+        let fileItems = await OutlineExplorerFileItem.loadItemsInPath(uri, index.uri2FileItem);
         if (!fileItems || fileItems.length === 0) {
             this.parent = undefined;
         } else {
@@ -70,7 +70,7 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
         return this.parent;
     }
 
-    static async loadItemsInDir(element: OutlineExplorerItem, ignoredUris: vscode.Uri[], index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem[]> {
+    static async LoadItemsInDir(element: OutlineExplorerItem, ignoredUris: vscode.Uri[], index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem[]> {
         let uri = element.fileItem.uri;
 
         let fileItems = await getFileItemsInDir(uri, ignoredUris);
@@ -97,7 +97,7 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
     }
 
     // create file items of uri and it's parents, if uri is out of workspaces, return empty
-    static async loadFileItemsInPath(uri: vscode.Uri, uri2OutlineExplorerFileItem: Map<string, OutlineExplorerFileItem>): Promise<OutlineExplorerFileItem[]> {
+    static async loadItemsInPath(uri: vscode.Uri, uri2OutlineExplorerFileItem: Map<string, OutlineExplorerFileItem>): Promise<OutlineExplorerFileItem[]> {
         let fileItemsInPath = await getFileItemsInPath(uri);
         if (!fileItemsInPath) {
             return [];
@@ -153,11 +153,11 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         }
     }
 
-    getItemType(): OutlineExplorerItemType {
+    GetItemType(): OutlineExplorerItemType {
         return OutlineExplorerItemType.Outline;
     }
 
-    async onClick() {
+    async OnClick() {
         const documentSymbol = this.outlineItem.documentSymbol;
         const selection = new vscode.Selection(documentSymbol.selectionRange.start, documentSymbol.selectionRange.start);
 
@@ -173,20 +173,20 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
     }
 
-    getTreeItem(): vscode.TreeItem {
+    GetTreeItem(): vscode.TreeItem {
         return this.treeItemFactory.Create(this);
     }
 
-    async getChildren(): Promise<OutlineExplorerItem[] | undefined> {
+    async GetChildren(): Promise<OutlineExplorerItem[] | undefined> {
         return this.children;
     }
 
-    async getParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined> {
+    async GetParent(index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerItem | undefined> {
         const targetOutlineItem = this.outlineItem;
         let outlineExplorerItems = index.uri2OutlineItems.get(this.fileItem.uri.toString());
 
         if (!outlineExplorerItems) {
-            outlineExplorerItems = await OutlineExplorerOutlineItem.loadOutlineItems(this, index);
+            return undefined;
         }
 
         const outlineItems = outlineExplorerItems.map(item => item.outlineItem).filter(item => item !== undefined);
@@ -197,7 +197,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         }
 
         if (parents.length === 0) {
-            let fileItems = await OutlineExplorerFileItem.loadFileItemsInPath(this.fileItem.uri, index.uri2FileItem);
+            let fileItems = await OutlineExplorerFileItem.loadItemsInPath(this.fileItem.uri, index.uri2FileItem);
             if (fileItems.length === 0) {
                 return undefined;
             }
@@ -219,7 +219,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         }
     }
 
-    getMatchedItemInRange(range: vscode.Range): OutlineExplorerItem | undefined {
+    GetMatchedItemInRange(range: vscode.Range): OutlineExplorerItem | undefined {
         let documentSymbol = this.outlineItem.documentSymbol;
 
         // it is not in the range of the documentSymbol
@@ -243,7 +243,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
         // then children first
         for (let child of this.children) {
-            let result = child.getMatchedItemInRange(range);
+            let result = child.GetMatchedItemInRange(range);
             if (result) {
                 return result;
             }
@@ -257,7 +257,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         return undefined;
     }
 
-    static async loadOutlineItems(element: OutlineExplorerItem, index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerOutlineItem[]> {
+    static async LoadOutlineItems(element: OutlineExplorerItem, index: Uri2OutlineExplorerItemIndex): Promise<OutlineExplorerOutlineItem[]> {
         if (element.fileItem.type !== vscode.FileType.File) {
             return [];
         }
@@ -293,7 +293,7 @@ function NewTreeItemFactory(): TreeItemFactory {
 
 class TreeItemFactoryImpl implements TreeItemFactory {
     Create(element: OutlineExplorerItem): vscode.TreeItem {
-        let itemType = element.getItemType();
+        let itemType = element.GetItemType();
 
         if (itemType === OutlineExplorerItemType.File) {
             return this.fromOutlineExplorerFileItem(element as OutlineExplorerFileItem);
