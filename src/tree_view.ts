@@ -115,27 +115,16 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             return;
         }
 
-        let items = await this.dataProvider.loadOutlineItems(e.textEditor.document.uri);
-        if (!items) {
+        let item = await this.dataProvider.getMatchedItemInRange(e.textEditor.document.uri, selection);
+        if (!item) {
             return;
         }
 
-        for (let item of items) {
-            if (!item.outlineItem) {
-                continue;
-            }
-
-            let result = item.getMatchedItemInRange(selection);
-            if (result) {
-                this.treeView.reveal(result, {
-                    select: true,
-                    focus: false,
-                    expand: true
-                });
-                return;
-            }
-        }
-
+        this.treeView.reveal(item, {
+            select: true,
+            focus: false,
+            expand: true
+        });
     }
 
     async OnTextDocumentChanged(e: vscode.TextDocumentChangeEvent) {
@@ -416,5 +405,31 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
         }
 
         return workspaceFolderItems;
+    }
+
+    async getMatchedItemInRange(uri: vscode.Uri, selection: vscode.Selection): Promise<OutlineExplorerItem | undefined> {
+        let fileItem = this.index.uri2FileItem.get(uri.toString());
+        if (!fileItem) {
+            return;
+        }
+
+
+        let items = await this.loadOutlineItems(fileItem);
+        if (!items) {
+            return;
+        }
+
+        for (let item of items) {
+            if (!item.outlineItem) {
+                continue;
+            }
+
+            let result = item.getMatchedItemInRange(selection);
+            if (result) {
+                return result;
+            }
+        }
+
+        return;
     }
 }
