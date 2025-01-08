@@ -10,6 +10,11 @@ export interface ItemManager {
     LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerFileItem[]>
     LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]>
     LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined>
+    DeleteItem(element: OutlineExplorerItem): void
+    DeleteItemByUri(uri: vscode.Uri): void
+    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined
+    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void
+    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined
 }
 
 export class ItemManagerFactory {
@@ -34,6 +39,33 @@ class ItemManagerImpl implements ItemManager {
             this.workspaceFolder2IgnoreUris.set(folder.uri.toString(), [gitIgnoreUri]);
         }
 
+    }
+
+    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void {
+        this.uri2FileItem.set(uri.toString(), fileItem);
+    }
+
+    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined {
+        return this.uri2FileItem.get(uri.toString());
+    }
+
+    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined {
+        return this.uri2OutlineItems.get(uri.toString());
+    }
+
+    DeleteItem(element: OutlineExplorerItem): void {
+        this.DeleteItemByUri(element.fileItem.uri);
+
+        if (element.GetItemType() === OutlineExplorerItemType.File && element.fileItem.type === vscode.FileType.Directory) {
+            for (let child of element.children ?? []) {
+                this.DeleteItem(child);
+            }
+        }
+    }
+
+    DeleteItemByUri(uri: vscode.Uri): void {
+        this.uri2OutlineItems.delete(uri.toString());
+        this.uri2FileItem.delete(uri.toString());
     }
 
     private getIgnoredUris(uri: vscode.Uri): vscode.Uri[] {

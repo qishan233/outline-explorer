@@ -61,11 +61,10 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
         if (documentSymbol.children.length > 0) {
             this.children = [];
-            let p: OutlineExplorerOutlineItem = this;
+
             for (let child of documentSymbol.children) {
-                let c = new OutlineExplorerOutlineItem(fileItem, p, child);
+                let c = new OutlineExplorerOutlineItem(fileItem, this, child);
                 this.children.push(c);
-                p = c;
             }
         }
     }
@@ -131,11 +130,6 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
         return undefined;
     }
-}
-
-export class Uri2OutlineExplorerItemIndex {
-    uri2FileItem: Map<string, OutlineExplorerFileItem> = new Map();
-    uri2OutlineItems: Map<string, OutlineExplorerOutlineItem[]> = new Map();
 }
 
 
