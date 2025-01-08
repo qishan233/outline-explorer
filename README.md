@@ -46,6 +46,10 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ## Release Notes
 
+### 0.0.5
+
+Fixed the problem that tree view item isn't selected when the symbol is selected
+
 ### 0.0.4
 
 Added the feature that sort outlines by their positions in the document;

@@ -2,6 +2,12 @@
 
 All notable changes to the "outline-explorer" extension will be documented in this file.
 
+## [0.0.5] -2025-01-09
+
+### Fixed
+
+1. Fixed the problem that tree view item isn't selected when the symbol is selected
+
 ## [0.0.4] - 2024-12-30
 
 ### Added
