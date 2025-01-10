@@ -110,10 +110,6 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
     }
 
     async OnTextDocumentChanged(e: vscode.TextDocumentChangeEvent) {
-        if (!this.treeViewVisible) {
-            return;
-        }
-
         await this.dataProvider.LoadOutlineItemsOfUri(e.document.uri);
     }
 
@@ -129,16 +125,12 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             return;
         }
 
-        console.log('OnActiveTextEditorChanged', e.document.uri);
-
         if (this.ignoreActiveEditorChange) {
             this.ignoreActiveEditorChange = false;
             return;
         }
 
-
-        const uri = e.document.uri;
-        await this.RevealUri(uri);
+        await this.RevealUri(e.document.uri);
     }
 
     async OnClick(item: OutlineExplorerItem) {
@@ -223,6 +215,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
         this.itemManager.DeleteItem(element);
 
+        // TODO use strategy pattern to handle different types of OutlineExplorerItem
         if (element.fileItem.type === vscode.FileType.Directory) {
             await this.itemManager.LoadItemsInDir(element);
         } else if (element.fileItem.type === vscode.FileType.File) {
@@ -247,8 +240,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
         // update the parent's children
         if (item.parent) {
-            let element = item.parent;
-            await this.itemManager.LoadItemsInDir(element);
+            await this.itemManager.LoadItemsInDir(item.parent);
         }
 
         this.dataChanged(item.parent);
@@ -324,6 +316,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
         let children: OutlineExplorerItem[] | undefined = undefined;
 
+        // TODO duplicate code with Refresh
         if (element.fileItem.type === vscode.FileType.Directory) {
             children = await this.itemManager.LoadItemsInDir(element);
         } else {
@@ -356,7 +349,6 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
         let workspaceFolderItems = new Array<OutlineExplorerItem>();
         for (let workspaceFolder of workspaceFolders) {
-
             let workspaceFolderItem = this.itemManager.GetFileItem(workspaceFolder.uri);
             if (workspaceFolderItem) {
                 workspaceFolderItems.push(workspaceFolderItem);
