@@ -194,17 +194,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
     constructor(context: vscode.ExtensionContext) { }
 
     async LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
-        let item = this.itemManager.GetFileItem(uri);
-        if (item) {
-            return item;
-        }
-
-        const items = await this.itemManager.LoadItemsInPath(uri);
-        if (!items || items.length === 0) {
-            return;
-        }
-
-        return items[items.length - 1];
+        return this.itemManager.LoadFileItem(uri);
     }
 
     async Refresh(element: OutlineExplorerItem | undefined): Promise<void> {
@@ -329,16 +319,15 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
     }
 
     async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
-        let item = await this.LoadFileItem(uri);
-        if (!item) {
+        let items = await this.itemManager.LoadOutlineItemsOfUri(uri);
+        if (!items || items.length === 0) {
             return;
         }
 
-        await this.itemManager.LoadOutlineItems(item);
+        let parent = items[0].parent;
+        this.dataChanged(parent);
 
-        this.dataChanged(item);
-
-        return item.children;
+        return items;
     }
 
     private async loadWorkspaceFolderItems(): Promise<OutlineExplorerItem[]> {

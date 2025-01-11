@@ -9,6 +9,8 @@ export interface ItemManager {
     LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]>
     LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerFileItem[]>
     LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]>
+    LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined>
+    LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined>
     LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined>
     DeleteItem(element: OutlineExplorerItem): void
     DeleteItemByUri(uri: vscode.Uri): void
@@ -47,6 +49,31 @@ class ItemManagerImpl implements ItemManager {
 
     GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined {
         return this.uri2FileItem.get(uri.toString());
+    }
+
+    async LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
+        let item = this.GetFileItem(uri);
+        if (item) {
+            return item;
+        }
+
+        const items = await this.LoadItemsInPath(uri);
+        if (!items || items.length === 0) {
+            return;
+        }
+
+        return items[items.length - 1];
+    }
+
+    async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
+        let item = await this.LoadFileItem(uri);
+        if (!item) {
+            return;
+        }
+
+        await this.LoadOutlineItems(item);
+
+        return item.children;
     }
 
     GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined {
