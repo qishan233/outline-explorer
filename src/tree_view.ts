@@ -47,6 +47,9 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
 
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
         this.treeViewVisible = e.visible;
+        if (this.treeViewVisible) {
+            this.revealActiveTextEditor();
+        }
     }
 
     async OnRenameFiles(event: vscode.FileRenameEvent) {
@@ -166,22 +169,26 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
     Init() {
         // wait the extension that provide the outline information to be ready
         setTimeout(async () => {
-            let activeEditor = vscode.window.activeTextEditor;
-            let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
             Logger.Info('First Refresh Begin');
 
             await this.Refresh(undefined);
 
             Logger.Info('First Refresh End');
 
-            if (activeEditor) {
-                await this.RevealUri(activeEditor.document.uri);
-            } else if (workspaceFolder) {
-                await this.RevealUri(workspaceFolder.uri);
-            }
+            await this.revealActiveTextEditor();
 
         }, DelayFirstRefreshTime);
+    }
+
+    async revealActiveTextEditor() {
+        let activeEditor = vscode.window.activeTextEditor;
+        let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+        if (activeEditor) {
+            await this.RevealUri(activeEditor.document.uri);
+        } else if (workspaceFolder) {
+            await this.RevealUri(workspaceFolder.uri);
+        }
     }
 }
 
