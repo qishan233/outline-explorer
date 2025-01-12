@@ -95,6 +95,10 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             return;
         }
 
+        if (!e.kind) {
+            return;
+        }
+
         const selection = e.selections[0];
         if (selection.isEmpty) {
             return;
@@ -163,7 +167,6 @@ export class OutlineExplorerTreeView extends eventHandler.BaseVSCodeEventHandler
             focus: false,
             expand: true
         });
-
     }
 
     Init() {
