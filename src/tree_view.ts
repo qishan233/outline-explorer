@@ -247,12 +247,11 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
 
     RemoveOutlineExplorerItem(uri: vscode.Uri): OutlineExplorerItem | undefined {
         let fileItem = this.itemManager.GetFileItem(uri);
-
-        this.itemManager.DeleteItemByUri(uri);
-
         if (!fileItem) {
             return;
         }
+
+        this.itemManager.DeleteItem(fileItem);
 
         for (let child of fileItem.children ?? []) {
             if (child.GetItemType() === OutlineExplorerItemType.File) {

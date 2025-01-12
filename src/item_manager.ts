@@ -53,11 +53,11 @@ class ItemManagerImpl implements ItemManager {
 
     async LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
         let items = await this.fileItemLoader.LoadItems(uri);
-        if (!items || items.length !== 1) {
+        if (!items || items.length === 0) {
             return;
         }
 
-        return items[0];
+        return items[items.length - 1];
     }
 
     async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
