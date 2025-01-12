@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as eventHandler from './listener';
 import * as Logger from './log';
 import { OutlineExplorerItem, OutlineExplorerItemType, OutlineExplorerFileItem, OutlineExplorerOutlineItem } from './item';
-import { ItemManagerFactory } from './item_manager';
+import { ItemLoaderFacadeFactory } from './item_loader_facade';
 
 const DelayFirstRefreshTime = 2000;
 
@@ -199,7 +199,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Outl
     private treeDataChangedEventEmitter: vscode.EventEmitter<OutlineExplorerItem | OutlineExplorerItem[] | void | void | null | undefined> = new vscode.EventEmitter<OutlineExplorerItem[]>();
     readonly onDidChangeTreeData: vscode.Event<OutlineExplorerItem | OutlineExplorerItem[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
 
-    private itemManager = ItemManagerFactory.Create();
+    private itemManager = ItemLoaderFacadeFactory.Create();
 
     constructor(context: vscode.ExtensionContext) { }
 

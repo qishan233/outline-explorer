@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { GetDocumentSymbols, SymbolKind2IconId, getParentsOfDocumentSymbol, OutlineItem } from './outline';
-import { FileItem, getFileItemsInPath, getFileItemsInDir } from './file';
+import { SymbolKind2IconId, OutlineItem } from './outline';
+import { FileItem } from './file';
 
 import * as Logger from './log';
 

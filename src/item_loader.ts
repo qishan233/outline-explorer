@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import { OutlineExplorerItem, OutlineExplorerItemType, OutlineExplorerFileItem, OutlineExplorerOutlineItem } from './item';
-import { GetDocumentSymbols, SymbolKind2IconId, getParentsOfDocumentSymbol, OutlineItem } from './outline';
-import { FileItem, getFileItemsInPath, getFileItemsInDir } from './file';
+import { GetDocumentSymbols } from './outline';
+import { getFileItemsInPath, getFileItemsInDir } from './file';
 
 
 interface ItemLoader {

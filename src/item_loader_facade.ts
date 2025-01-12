@@ -1,37 +1,36 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 
 import { OutlineExplorerItem, OutlineExplorerItemType, OutlineExplorerFileItem, OutlineExplorerOutlineItem } from './item';
 import { ItemLoaderFactory } from './item_loader';
 
-export interface ItemManager {
-    LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> // LoadChildren
-    LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]> // LoadChildren
+export interface ItemLoaderFacade {
+    LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]>
+    LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]>
 
 
-    LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerItem[]> // LoadParents
-    LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> // LoadItems
+    LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerItem[]>
+    LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined>
 
-    LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> // LoadItems
+    LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined>
 
-    LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined> //LoadParent
+    LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined>
 
-    DeleteItem(element: OutlineExplorerItem): void // DeleteItems
+    DeleteItem(element: OutlineExplorerItem): void
 
-    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined // GetItems
-    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void // SetItems
+    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined
+    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void
 
-    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined // GetItems
+    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined
 }
 
-export class ItemManagerFactory {
-    static Create(): ItemManager {
-        return new ItemManagerImpl();
+export class ItemLoaderFacadeFactory {
+    static Create(): ItemLoaderFacade {
+        return new ItemLoaderFacadeImpl();
     }
 }
 
 
-class ItemManagerImpl implements ItemManager {
+class ItemLoaderFacadeImpl implements ItemLoaderFacade {
     fileItemLoader = ItemLoaderFactory.FileItemLoader();
     outlineItemLoader = ItemLoaderFactory.OutlineItemLoader(this.fileItemLoader);
 
