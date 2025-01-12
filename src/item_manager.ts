@@ -2,21 +2,26 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import { OutlineExplorerItem, OutlineExplorerItemType, OutlineExplorerFileItem, OutlineExplorerOutlineItem } from './item';
-import { GetDocumentSymbols, SymbolKind2IconId, getParentsOfDocumentSymbol, OutlineItem } from './outline';
-import { FileItem, getFileItemsInPath, getFileItemsInDir } from './file';
+import { ItemLoaderFactory } from './item_loader';
 
 export interface ItemManager {
-    LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]>
-    LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerFileItem[]>
-    LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]>
-    LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined>
-    LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined>
-    LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined>
-    DeleteItem(element: OutlineExplorerItem): void
-    DeleteItemByUri(uri: vscode.Uri): void
-    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined
-    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void
-    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined
+    LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> // LoadChildren
+    LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]> // LoadChildren
+
+
+    LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerItem[]> // LoadParents
+    LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> // LoadItems
+
+    LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> // LoadItems
+
+    LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined> //LoadParent
+
+    DeleteItem(element: OutlineExplorerItem): void // DeleteItems
+
+    GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined // GetItems
+    SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void // SetItems
+
+    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined // GetItems
 }
 
 export class ItemManagerFactory {
@@ -27,218 +32,108 @@ export class ItemManagerFactory {
 
 
 class ItemManagerImpl implements ItemManager {
-    uri2FileItem: Map<string, OutlineExplorerFileItem> = new Map();
-    uri2OutlineItems: Map<string, OutlineExplorerOutlineItem[]> = new Map();
-    workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
-
+    fileItemLoader = ItemLoaderFactory.FileItemLoader();
+    outlineItemLoader = ItemLoaderFactory.OutlineItemLoader(this.fileItemLoader);
 
     constructor() {
-        const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
-
-        // ignore the .git folder
-        for (let folder of workspaceFolders) {
-            let gitIgnoreUri = vscode.Uri.file(path.join(folder.uri.fsPath, '.git'));
-            this.workspaceFolder2IgnoreUris.set(folder.uri.toString(), [gitIgnoreUri]);
-        }
-
     }
 
     SetFileItem(uri: vscode.Uri, fileItem: OutlineExplorerFileItem): void {
-        this.uri2FileItem.set(uri.toString(), fileItem);
+        this.fileItemLoader.SetItems(uri, [fileItem]);
     }
 
     GetFileItem(uri: vscode.Uri): OutlineExplorerFileItem | undefined {
-        return this.uri2FileItem.get(uri.toString());
-    }
-
-    async LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
-        let item = this.GetFileItem(uri);
-        if (item) {
-            return item;
+        let items = this.fileItemLoader.GetItems(uri);
+        if (items && items.length === 1) {
+            return items[0] as OutlineExplorerFileItem;
         }
-
-        const items = await this.LoadItemsInPath(uri);
-        if (!items || items.length === 0) {
-            return;
-        }
-
-        return items[items.length - 1];
-    }
-
-    async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
-        let item = await this.LoadFileItem(uri);
-        if (!item) {
-            return;
-        }
-
-        await this.LoadOutlineItems(item);
-
-        return item.children;
-    }
-
-    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined {
-        return this.uri2OutlineItems.get(uri.toString());
-    }
-
-    DeleteItem(element: OutlineExplorerItem): void {
-        this.DeleteItemByUri(element.fileItem.uri);
-
-        if (element.GetItemType() === OutlineExplorerItemType.File && element.fileItem.type === vscode.FileType.Directory) {
-            for (let child of element.children ?? []) {
-                this.DeleteItem(child);
-            }
-        }
-    }
-
-    DeleteItemByUri(uri: vscode.Uri): void {
-        this.uri2OutlineItems.delete(uri.toString());
-        this.uri2FileItem.delete(uri.toString());
-    }
-
-    private getIgnoredUris(uri: vscode.Uri): vscode.Uri[] {
-        let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-        let ignoredUris: vscode.Uri[] = [];
-        if (workspaceFolder) {
-            let i = this.workspaceFolder2IgnoreUris.get(workspaceFolder.uri.toString());
-            if (i) {
-                ignoredUris = i;
-            }
-        }
-
-        return ignoredUris;
-    }
-
-    async LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> {
-        let uri = element.fileItem.uri;
-
-        let fileItems = await getFileItemsInDir(uri, this.getIgnoredUris(uri));
-
-        const outlineExplorerFileItems = fileItems.map(fileItem => {
-            let item = this.uri2FileItem.get(fileItem.uri.toString());
-
-            if (!item) {
-                item = new OutlineExplorerFileItem(fileItem.uri, fileItem.type);
-            }
-
-            item.parent = element;
-
-            return item;
-        });
-
-        for (let item of outlineExplorerFileItems) {
-            this.uri2FileItem.set(item.fileItem.uri.toString(), item);
-        }
-
-        element.children = outlineExplorerFileItems;
-
-        return outlineExplorerFileItems;
-    }
-
-    async LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerFileItem[]> {
-        let fileItemsInPath = await getFileItemsInPath(uri);
-        if (!fileItemsInPath) {
-            return [];
-        }
-
-        let outlineExplorerFileItems: OutlineExplorerFileItem[] = [];
-        for (let i = 0; i < fileItemsInPath.length; i++) {
-            const fileItem = fileItemsInPath[i];
-
-            let existFileItem = this.uri2FileItem.get(fileItem.uri.toString());
-            if (existFileItem) {
-                outlineExplorerFileItems.push(existFileItem);
-                continue;
-            }
-
-            let item = new OutlineExplorerFileItem(fileItem.uri, fileItem.type);
-            item.parent = i === 0 ? undefined : outlineExplorerFileItems[i - 1];
-
-            outlineExplorerFileItems.push(item);
-        }
-
-        for (let item of outlineExplorerFileItems) {
-            this.uri2FileItem.set(item.fileItem.uri.toString(), item);
-        }
-
-        return outlineExplorerFileItems;
-    }
-
-    async LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]> {
-        if (element.fileItem.type !== vscode.FileType.File) {
-            return [];
-        }
-
-        const uri = element.fileItem.uri;
-        const outlineItems = await GetDocumentSymbols(uri);
-        let items = outlineItems.map(documentSymbol => {
-            return new OutlineExplorerOutlineItem(element.fileItem, element, documentSymbol);
-        });
-
-        element.children = items;
-
-        this.uri2OutlineItems.set(element.fileItem.uri.toString(), items);
-
-        return items;
-    }
-
-    async LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined> {
-        if (element.GetItemType() === OutlineExplorerItemType.File) {
-            return this.loadParentOfFileItem(element as OutlineExplorerFileItem);
-        }
-
-        if (element.GetItemType() === OutlineExplorerItemType.Outline) {
-            return this.loadParentOfOutlineItem(element as OutlineExplorerOutlineItem);
-        }
-
 
         return undefined;
     }
 
-    private async loadParentOfFileItem(element: OutlineExplorerFileItem): Promise<OutlineExplorerItem | undefined> {
-        const uri = element.fileItem.uri;
-        let fileItems = await this.LoadItemsInPath(uri);
-        if (!fileItems || fileItems.length === 0) {
-            element.parent = undefined;
+    async LoadFileItem(uri: vscode.Uri): Promise<OutlineExplorerItem | undefined> {
+        let items = await this.fileItemLoader.LoadItems(uri);
+        if (!items || items.length !== 1) {
+            return;
         }
 
-        return element.parent;
-
+        return items[0];
     }
 
-    private async loadParentOfOutlineItem(element: OutlineExplorerOutlineItem): Promise<OutlineExplorerItem | undefined> {
-        const targetOutlineItem = element.outlineItem;
-        let outlineExplorerItems = this.uri2OutlineItems.get(element.fileItem.uri.toString());
+    async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<OutlineExplorerItem[] | undefined> {
+        return this.outlineItemLoader.LoadItems(uri);
+    }
 
-        if (!outlineExplorerItems) {
-            return undefined;
+    GetOutlineItems(uri: vscode.Uri): OutlineExplorerOutlineItem[] | undefined {
+        let items = this.outlineItemLoader.GetItems(uri);
+        if (!items) {
+            return;
         }
 
-        const outlineItems = outlineExplorerItems.map(item => item.outlineItem).filter(item => item !== undefined);
+        let result = [];
 
-        const parents = getParentsOfDocumentSymbol(outlineItems, targetOutlineItem.documentSymbol);
-        if (!parents) {
-            return undefined;
-        }
-
-        let parent: OutlineExplorerItem | undefined = undefined;
-
-        if (parents.length === 0) {
-            let fileItems = await this.LoadItemsInPath(element.fileItem.uri);
-            if (fileItems.length !== 0) {
-                parent = fileItems[fileItems.length - 1];
+        for (let item of items) {
+            if (item.GetItemType() === OutlineExplorerItemType.Outline) {
+                result.push(item as OutlineExplorerOutlineItem);
             }
-        } else {
-            const parentOutlineItem = parents[parents.length - 1];
-            parent = outlineExplorerItems.find(item => {
-                if (!item.outlineItem) {
-                    return false;
-                }
-                return item.outlineItem === parentOutlineItem;
-            });
         }
 
-        element.parent = parent;
-
-        return parent;
+        return result;
     }
+
+    DeleteItem(element: OutlineExplorerItem): void {
+        this.fileItemLoader.DeleteItems(element);
+
+        this.outlineItemLoader.DeleteItems(element);
+    }
+
+
+    async LoadItemsInDir(element: OutlineExplorerItem): Promise<OutlineExplorerItem[]> {
+        return this.fileItemLoader.LoadChildren(element);
+    }
+
+    async LoadItemsInPath(uri: vscode.Uri): Promise<OutlineExplorerItem[]> {
+        let items = await this.fileItemLoader.LoadParents(uri);
+        if (!items) {
+            return [];
+        }
+
+        let result = [];
+        for (let item of items) {
+            if (item.GetItemType() === OutlineExplorerItemType.File) {
+                result.push(item as OutlineExplorerFileItem);
+            }
+        }
+
+        return result;
+    }
+
+    async LoadOutlineItems(element: OutlineExplorerItem): Promise<OutlineExplorerOutlineItem[]> {
+        let items = await this.outlineItemLoader.LoadChildren(element);
+        if (!items) {
+            return [];
+        }
+
+        let result = [];
+        for (let item of items) {
+            if (item.GetItemType() === OutlineExplorerItemType.Outline) {
+                result.push(item as OutlineExplorerOutlineItem);
+            }
+        }
+
+        return result;
+    }
+
+    async LoadParentItem(element: OutlineExplorerItem): Promise<OutlineExplorerItem | undefined> {
+        if (element.GetItemType() === OutlineExplorerItemType.File) {
+            return this.fileItemLoader.LoadParent(element);
+        }
+
+        if (element.GetItemType() === OutlineExplorerItemType.Outline) {
+            return this.outlineItemLoader.LoadParent(element);
+        }
+
+        return undefined;
+    }
+
 }
