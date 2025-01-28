@@ -46,9 +46,15 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ## Release Notes
 
+### 0.0.6
+
+Added the feature that revealing active editor item in tree view when the view is visible;
+
+Fixed the problem that outline info wasn't updated when the tree view is not visible;
+
 ### 0.0.5
 
-Fixed the problem that tree view item isn't selected when the symbol is selected
+Fixed the problem that tree view item isn't selected when the symbol is selected;
 
 ### 0.0.4
 
@@ -76,6 +82,6 @@ Improved some details and slightly increased code cleanliness (still far from en
 
 ### 0.0.1
 
-Added the feature to display files and their outline information, with support for interaction with the editor.
+Added the feature to display files and their outline information, with support for interaction with the editor;
 
 **Enjoy!**

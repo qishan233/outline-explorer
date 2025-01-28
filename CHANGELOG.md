@@ -2,7 +2,17 @@
 
 All notable changes to the "outline-explorer" extension will be documented in this file.
 
-## [0.0.5] -2025-01-09
+## [0.0.6] - 2025-01-29
+
+### Added
+
+1. Added the feature that revealing active editor item in tree view when the view is visible;
+
+### Fixed
+
+1. Fixed the problem that outline info wasn't updated when the tree view is not visible;
+
+## [0.0.5] - 2025-01-09
 
 ### Fixed
 
