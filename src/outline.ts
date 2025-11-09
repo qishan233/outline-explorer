@@ -56,7 +56,7 @@ export const SymbolKind2IconId = new Map<vscode.SymbolKind, string>([
     [vscode.SymbolKind.File, 'symbol-file'],
     [vscode.SymbolKind.Module, 'symbol-module'],
     [vscode.SymbolKind.Namespace, 'symbol-namespace'],
-    [vscode.SymbolKind.Package, '	symbol-package'],
+    [vscode.SymbolKind.Package, 'symbol-package'],
     [vscode.SymbolKind.Class, 'symbol-class'],
     [vscode.SymbolKind.Method, 'symbol-method'],
     [vscode.SymbolKind.Property, 'symbol-property'],
