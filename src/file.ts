@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as Logger from './log';
 
 
-export class FileItem {
+export class FileInfo {
     uri: vscode.Uri;
     type: vscode.FileType;
 
@@ -48,21 +48,21 @@ export function getParentUriInWorkspace(uri: vscode.Uri): vscode.Uri | undefined
     return undefined;
 }
 
-export async function getFileItemsInPath(uri: vscode.Uri): Promise<FileItem[] | undefined> {
+export async function getFileInfosInPath(uri: vscode.Uri): Promise<FileInfo[] | undefined> {
     if (!isInWorkspace(uri)) {
         return undefined;
     }
 
     try {
         let uriIsFile = await isFile(uri);
-        const p = new FileItem(uri, uriIsFile ? vscode.FileType.File : vscode.FileType.Directory);
+        const p = new FileInfo(uri, uriIsFile ? vscode.FileType.File : vscode.FileType.Directory);
 
         let parentUri = getParentUriInWorkspace(uri);
         if (!parentUri) {
             return [p];
         }
 
-        let parents = await getFileItemsInPath(parentUri);
+        let parents = await getFileInfosInPath(parentUri);
 
         if (!parents) {
             return [p];
@@ -75,7 +75,7 @@ export async function getFileItemsInPath(uri: vscode.Uri): Promise<FileItem[] | 
     }
 }
 
-export async function getFileItemsInDir(uri: vscode.Uri, ignores: vscode.Uri[] | undefined): Promise<FileItem[]> {
+export async function getFileInfosInDir(uri: vscode.Uri, ignores: vscode.Uri[] | undefined): Promise<FileInfo[]> {
     try {
         const stat = await vscode.workspace.fs.stat(uri);
         if (stat.type !== vscode.FileType.Directory) {
@@ -100,7 +100,7 @@ export async function getFileItemsInDir(uri: vscode.Uri, ignores: vscode.Uri[] |
         });
 
         const fileEntries = children.map(([name, type]) => {
-            return new FileItem(vscode.Uri.joinPath(uri, name), type);
+            return new FileInfo(vscode.Uri.joinPath(uri, name), type);
         });
 
         return fileEntries;

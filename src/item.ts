@@ -1,43 +1,43 @@
 import * as vscode from 'vscode';
 
-import { SymbolKind2IconId, OutlineItem } from './outline';
-import { FileItem } from './file';
+import { SymbolKind2IconId, OutlineInfo } from './outline';
+import { FileInfo } from './file';
 
 import * as Logger from './log';
 
-export enum OutlineExplorerItemType {
+export enum ItemType {
     File,
     Outline
 }
 
-export interface OutlineExplorerItem {
-    fileItem: FileItem;
-    parent: OutlineExplorerItem | undefined;
-    children: OutlineExplorerItem[] | undefined;
+export interface Item {
+    fileInfo: FileInfo;
+    parent: Item | undefined;
+    children: Item[] | undefined;
 
     GetTreeItem(): vscode.TreeItem;
-    GetItemType(): OutlineExplorerItemType;
+    GetItemType(): ItemType;
 
     OnClick(): void;
 }
 
-export class OutlineExplorerFileItem implements OutlineExplorerItem {
-    fileItem: FileItem;
-    parent: OutlineExplorerItem | undefined;
-    children: OutlineExplorerItem[] | undefined;
+export class FileItem implements Item {
+    fileInfo: FileInfo;
+    parent: Item | undefined;
+    children: Item[] | undefined;
 
     private treeItemFactory: TreeItemFactory = NewTreeItemFactory();
 
     constructor(uri: vscode.Uri, type: vscode.FileType) {
-        this.fileItem = new FileItem(uri, type);
+        this.fileInfo = new FileInfo(uri, type);
     }
 
-    GetItemType(): OutlineExplorerItemType {
-        return OutlineExplorerItemType.File;
+    GetItemType(): ItemType {
+        return ItemType.File;
     }
 
     OnClick() {
-        vscode.commands.executeCommand('vscode.open', this.fileItem.uri);
+        vscode.commands.executeCommand('vscode.open', this.fileInfo.uri);
     }
 
     GetTreeItem(): vscode.TreeItem {
@@ -45,42 +45,42 @@ export class OutlineExplorerFileItem implements OutlineExplorerItem {
     }
 }
 
-export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
-    fileItem: FileItem;
-    parent: OutlineExplorerItem | undefined;
-    children: OutlineExplorerOutlineItem[] | undefined;
+export class OutlineItem implements Item {
+    fileInfo: FileInfo;
+    parent: Item | undefined;
+    children: OutlineItem[] | undefined;
 
-    outlineItem: OutlineItem;
+    outlineInfo: OutlineInfo;
 
     private treeItemFactory: TreeItemFactory = NewTreeItemFactory();
 
-    constructor(fileItem: FileItem, parent: OutlineExplorerItem | undefined, documentSymbol: vscode.DocumentSymbol) {
-        this.fileItem = fileItem;
+    constructor(fileItem: FileInfo, parent: Item | undefined, documentSymbol: vscode.DocumentSymbol) {
+        this.fileInfo = fileItem;
         this.parent = parent;
-        this.outlineItem = { documentSymbol };
+        this.outlineInfo = { documentSymbol };
 
         if (documentSymbol.children.length > 0) {
             this.children = [];
 
             for (let child of documentSymbol.children) {
-                let c = new OutlineExplorerOutlineItem(fileItem, this, child);
+                let c = new OutlineItem(fileItem, this, child);
                 this.children.push(c);
             }
         }
     }
 
-    GetItemType(): OutlineExplorerItemType {
-        return OutlineExplorerItemType.Outline;
+    GetItemType(): ItemType {
+        return ItemType.Outline;
     }
 
     async OnClick() {
-        const documentSymbol = this.outlineItem.documentSymbol;
+        const documentSymbol = this.outlineInfo.documentSymbol;
         const selection = new vscode.Selection(documentSymbol.selectionRange.start, documentSymbol.selectionRange.start);
 
         let targetEditor = vscode.window.activeTextEditor;
         let document = targetEditor?.document;
 
-        let uri = this.fileItem.uri;
+        let uri = this.fileInfo.uri;
 
         if (!document || document.uri.toString() !== uri.toString()) {
             document = await vscode.workspace.openTextDocument(uri.path);
@@ -93,8 +93,8 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
         return this.treeItemFactory.Create(this);
     }
 
-    GetMatchedItemInRange(range: vscode.Range): OutlineExplorerItem | undefined {
-        let documentSymbol = this.outlineItem.documentSymbol;
+    GetMatchedItemInRange(range: vscode.Range): Item | undefined {
+        let documentSymbol = this.outlineInfo.documentSymbol;
 
         // it is not in the range of the documentSymbol
         if (!documentSymbol.range.contains(range)) {
@@ -134,7 +134,7 @@ export class OutlineExplorerOutlineItem implements OutlineExplorerItem {
 
 
 interface TreeItemFactory {
-    Create(element: OutlineExplorerItem): vscode.TreeItem;
+    Create(element: Item): vscode.TreeItem;
 }
 
 function NewTreeItemFactory(): TreeItemFactory {
@@ -143,26 +143,26 @@ function NewTreeItemFactory(): TreeItemFactory {
 
 
 class TreeItemFactoryImpl implements TreeItemFactory {
-    Create(element: OutlineExplorerItem): vscode.TreeItem {
+    Create(element: Item): vscode.TreeItem {
         let itemType = element.GetItemType();
 
-        if (itemType === OutlineExplorerItemType.File) {
-            return this.fromOutlineExplorerFileItem(element as OutlineExplorerFileItem);
-        } else if (itemType === OutlineExplorerItemType.Outline) {
-            return this.fromOutlineExplorerOutlineItem(element as OutlineExplorerOutlineItem);
+        if (itemType === ItemType.File) {
+            return this.fromFileItem(element as FileItem);
+        } else if (itemType === ItemType.Outline) {
+            return this.fromOutlineItem(element as OutlineItem);
         }
 
         Logger.Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ', element);
         throw new Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ');
     }
 
-    fromOutlineExplorerFileItem(element: OutlineExplorerFileItem): vscode.TreeItem {
-        if (!element.fileItem) {
-            Logger.Error('createFileItem TreeItem Invalid OutlineExploreItem ');
-            throw new Error('createFileItem TreeItem Invalid OutlineExploreItem ');
+    fromFileItem(element: FileItem): vscode.TreeItem {
+        if (!element.fileInfo) {
+            Logger.Error('createFileInfo TreeItem Invalid OutlineExploreItem ');
+            throw new Error('createFileInfo TreeItem Invalid OutlineExploreItem ');
         }
 
-        let fileItem = element.fileItem;
+        let fileItem = element.fileInfo;
 
         const treeItem = new vscode.TreeItem(fileItem.uri);
         treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
@@ -183,13 +183,13 @@ class TreeItemFactoryImpl implements TreeItemFactory {
         return treeItem;
     }
 
-    fromOutlineExplorerOutlineItem(element: OutlineExplorerOutlineItem): vscode.TreeItem {
-        if (!element.outlineItem || !element.outlineItem.documentSymbol) {
+    fromOutlineItem(element: OutlineItem): vscode.TreeItem {
+        if (!element.outlineInfo || !element.outlineInfo.documentSymbol) {
             Logger.Error('createOutlineItem TreeItem Invalid OutlineExploreItem ', element);
             throw new Error('createOutlineItem TreeItem Invalid OutlineExploreItem ');
         }
 
-        let documentSymbol = element.outlineItem.documentSymbol;
+        let documentSymbol = element.outlineInfo.documentSymbol;
 
         const treeItem = new vscode.TreeItem(documentSymbol.name);
         if (documentSymbol.children?.length > 0) {

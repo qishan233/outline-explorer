@@ -82,7 +82,7 @@ export const SymbolKind2IconId = new Map<vscode.SymbolKind, string>([
 ]);
 
 
-export class OutlineItem {
+export class OutlineInfo {
     documentSymbol: vscode.DocumentSymbol;
     constructor(documentSymbol: vscode.DocumentSymbol) {
         this.documentSymbol = documentSymbol;
@@ -98,7 +98,7 @@ function isDocumentSymbolEqual(a: vscode.DocumentSymbol, b: vscode.DocumentSymbo
         && a.selectionRange.isEqual(b.selectionRange);
 }
 
-export function getParentsOfDocumentSymbol(items: OutlineItem[], targetDocumentSymbol: vscode.DocumentSymbol): OutlineItem[] | undefined {
+export function getParentsOfDocumentSymbol(items: OutlineInfo[], targetDocumentSymbol: vscode.DocumentSymbol): OutlineInfo[] | undefined {
     for (let item of items) {
         if (isDocumentSymbolEqual(item.documentSymbol, targetDocumentSymbol)) {
             return [];
