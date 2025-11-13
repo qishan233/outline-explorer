@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as eventHandler from './listener';
 import * as Logger from './log';
 import { Item, ItemType } from './item';
-import { OutlineExplorerDataProvider } from './outline_explorer_data_provider';
+import { OutlineExplorerDataProvider } from './item_data_provider';
 
 
 const DelayFirstRefreshTime = 2000;

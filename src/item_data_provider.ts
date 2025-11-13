@@ -15,6 +15,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         return this.itemManager.LoadFileItem(uri);
     }
 
+
     async Refresh(element: Item | undefined): Promise<void> {
         if (!element) {
             this.dataChanged(element);
@@ -29,6 +30,16 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         } else if (element.fileInfo.type === vscode.FileType.File) {
             await this.itemManager.LoadOutlineItems(element);
         }
+
+        this.dataChanged(element);
+    }
+
+    async ToExpand(element: Item | undefined): Promise<void> {
+        if (!element) {
+            return;
+        }
+
+        
 
         this.dataChanged(element);
     }
@@ -193,4 +204,5 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         return;
     }
+
 }

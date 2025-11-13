@@ -4,32 +4,51 @@ import { SymbolKind2IconId, OutlineInfo } from './outline';
 import { FileInfo } from './file';
 
 import * as Logger from './log';
+import * as uuid from './id';
 
 export enum ItemType {
     File,
     Outline
 }
 
-export interface Item {
+export abstract class Item {
     fileInfo: FileInfo;
     parent: Item | undefined;
     children: Item[] | undefined;
 
-    GetTreeItem(): vscode.TreeItem;
-    GetItemType(): ItemType;
+    treeItem: vscode.TreeItem | undefined;
 
-    OnClick(): void;
+    constructor(fileInfo: FileInfo, parent?: Item) {
+        this.fileInfo = fileInfo;
+        this.parent = parent;
+    }
+
+    abstract GetItemType(): ItemType;
+    abstract OnClick(): void;
+    abstract CreateTreeItem(): vscode.TreeItem;
+    async CloneTreeItem(): Promise<vscode.TreeItem> {
+        if (!this.treeItem) {
+            return this.CreateTreeItem();
+        }
+        let id = await uuid.GenerateUid();
+
+        this.treeItem.id = id;
+        return this.treeItem;
+    }
+
+    GetTreeItem(): vscode.TreeItem {
+        if (!this.treeItem) {
+            this.treeItem = this.CreateTreeItem();
+        }
+        return this.treeItem;
+    }
 }
 
-export class FileItem implements Item {
-    fileInfo: FileInfo;
-    parent: Item | undefined;
-    children: Item[] | undefined;
-
+export class FileItem extends Item {
     private treeItemFactory: TreeItemFactory = NewTreeItemFactory();
 
     constructor(uri: vscode.Uri, type: vscode.FileType) {
-        this.fileInfo = new FileInfo(uri, type);
+        super(new FileInfo(uri, type));
     }
 
     GetItemType(): ItemType {
@@ -40,23 +59,20 @@ export class FileItem implements Item {
         vscode.commands.executeCommand('vscode.open', this.fileInfo.uri);
     }
 
-    GetTreeItem(): vscode.TreeItem {
+    CreateTreeItem(): vscode.TreeItem {
         return this.treeItemFactory.Create(this);
     }
 }
 
-export class OutlineItem implements Item {
-    fileInfo: FileInfo;
-    parent: Item | undefined;
-    children: OutlineItem[] | undefined;
+export class OutlineItem extends Item {
+    declare children: OutlineItem[] | undefined;
 
     outlineInfo: OutlineInfo;
 
     private treeItemFactory: TreeItemFactory = NewTreeItemFactory();
 
     constructor(fileItem: FileInfo, parent: Item | undefined, documentSymbol: vscode.DocumentSymbol) {
-        this.fileInfo = fileItem;
-        this.parent = parent;
+        super(fileItem, parent);
         this.outlineInfo = { documentSymbol };
 
         if (documentSymbol.children.length > 0) {
@@ -89,7 +105,7 @@ export class OutlineItem implements Item {
         await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
     }
 
-    GetTreeItem(): vscode.TreeItem {
+    CreateTreeItem(): vscode.TreeItem {
         return this.treeItemFactory.Create(this);
     }
 
