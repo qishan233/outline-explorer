@@ -11,6 +11,11 @@ const DelayFirstRefreshTime = 2000;
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
+
+    private expandEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item>();
+    private collapseEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item>();
+
+
     private dataProvider: OutlineExplorerDataProvider;
 
     private treeViewVisible = false;
@@ -21,6 +26,9 @@ export class OutlineExplorerTreeView {
         this.dataProvider = new OutlineExplorerDataProvider(context);
         this.treeView = vscode.window.createTreeView('outline-explorer', { treeDataProvider: this.dataProvider });
 
+        this.treeView.onDidExpandElement(e => this.OnExpand(e));
+        this.treeView.onDidCollapseElement(e => this.OnCollapse(e));
+
         // 注册插件相关组件
         context.subscriptions.push(this.treeView);
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.item-clicked', async (item) => {
@@ -29,6 +37,15 @@ export class OutlineExplorerTreeView {
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.refresh', (element) => {
             this.Refresh(element);
         }, this));
+        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.expand-all', async () => {
+            await this.ToExpand();
+        }, this));
+        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.collapse-all', async () => {
+            await this.ToCollapse();
+        }, this));
+
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-expand', false);
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-collapse', true);
 
         // 注册树视图事件处理程序
         this.treeView.onDidChangeVisibility(e => this.OnVisibilityChanged(e));
@@ -169,6 +186,25 @@ export class OutlineExplorerTreeView {
             expand: true
         });
     }
+
+    async ToExpand(): Promise<void> {
+
+
+    }
+
+    async ToCollapse(): Promise<void> {
+
+    }
+
+    OnExpand(e: vscode.TreeViewExpansionEvent<Item>): void {
+        console.log('OnExpand', e.element);
+    }
+
+    OnCollapse(e: vscode.TreeViewExpansionEvent<Item>): void {
+        console.log('OnCollapse', e.element);
+    }
+
+
 
     Init() {
         // wait the extension that provide the outline information to be ready

@@ -32,6 +32,16 @@
         "command": "outline-explorer.refresh",
         "title": "%command.title.refresh%",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "outline-explorer.expand-all",
+        "title": "%command.title.expand-all%",
+        "icon": "$(expand-all)"
+      },
+      {
+        "command": "outline-explorer.collapse-all",
+        "title": "%command.title.collapse-all%",
+        "icon": "$(collapse-all)"
       }
     ],
     "viewsContainers": {
@@ -58,6 +68,18 @@
         {
           "command": "outline-explorer.refresh",
           "when": "view == outline-explorer && (viewItem == file || viewItem == folder)",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "outline-explorer.expand-all",
+          "when": "view == outline-explorer && code-lens.context.can-expand",
+          "group": "navigation"
+        },
+        {
+          "command": "outline-explorer.collapse-all",
+          "when": "view == outline-explorer && code-lens.context.can-collapse",
           "group": "navigation"
         }
       ]
