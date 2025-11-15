@@ -34,12 +34,51 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         this.dataChanged(element);
     }
 
+    /**
+     * Expand the element
+     * @param element 
+     * @returns 
+     */
     async ToExpand(element: Item | undefined): Promise<void> {
         if (!element) {
             return;
         }
 
-        
+
+        this.dataChanged(element);
+    }
+
+    /**
+     * Collapse the element
+     * @param element 
+     * @returns 
+     */
+    async ToCollapse(element: Item | undefined): Promise<void> {
+
+    }
+
+    /**
+     * On expand the element record the element
+     * @param element 
+     * @returns 
+     */
+    async OnDidExpand(element: Item | undefined): Promise<void> {
+        if (!element) {
+            return;
+        }
+
+        this.dataChanged(element);
+    }
+
+    /**
+     * On collapse the element remove the element from the record
+     * @param element 
+     * @returns 
+     */
+    async OnDidCollapse(element: Item | undefined): Promise<void> {
+        if (!element) {
+            return;
+        }
 
         this.dataChanged(element);
     }

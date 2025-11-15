@@ -2,5 +2,7 @@
     "command.title.click": "Click",
     "command.title.refresh": "Refresh",
     "extension.name": "Outline Explorer",
-    "view.welcome.content": "Welcome to the Outline Explorer! This extension is initializing, please wait... or there is no content to display."
+    "view.welcome.content": "Welcome to the Outline Explorer! This extension is initializing, please wait... or there is no content to display.",
+    "command.title.expand-all": "Expand All",
+    "command.title.collapse-all": "Collapse All"
 }
