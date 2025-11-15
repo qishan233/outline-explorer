@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { Item, ItemType, FileItem } from './item';
 import * as Logger from './log';
-import { ItemManagerFactory } from './item_manger_facade';
+import { ItemManagerFacadeFactory } from './item_manger_facade';
 
 export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item> {
     private treeDataChangedEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item[]>();
     readonly onDidChangeTreeData: vscode.Event<Item | Item[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
 
-    private itemManager = ItemManagerFactory.Create();
+    private itemManager = ItemManagerFacadeFactory.Create();
 
     constructor(context: vscode.ExtensionContext) { }
 
@@ -28,7 +28,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         if (element.fileInfo.type === vscode.FileType.Directory) {
             await this.itemManager.LoadItemsInDir(element);
         } else if (element.fileInfo.type === vscode.FileType.File) {
-            await this.itemManager.LoadOutlineItems(element);
+            await this.itemManager.LoadOutlineItems(element as FileItem);
         }
 
         this.dataChanged(element);
@@ -177,7 +177,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         if (element.fileInfo.type === vscode.FileType.Directory) {
             children = await this.itemManager.LoadItemsInDir(element);
         } else {
-            children = await this.itemManager.LoadOutlineItems(element);
+            children = await this.itemManager.LoadOutlineItems(element as FileItem);
         }
 
         element.children = children;

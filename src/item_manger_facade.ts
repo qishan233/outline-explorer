@@ -3,15 +3,14 @@ import * as vscode from 'vscode';
 import { Item, ItemType, FileItem, OutlineItem } from './item';
 import { ItemItemFactory } from './item_manager';
 
-export interface ItemManager {
-    LoadItemsInDir(element: Item): Promise<Item[]>
-    LoadOutlineItems(element: Item): Promise<OutlineItem[]>
-
+export interface ItemManagerFacade {
+    LoadItemsInDir(element: Item): Promise<FileItem[]>
+    LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]>
 
     LoadItemsInPath(uri: vscode.Uri): Promise<Item[]>
     LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<Item[] | undefined>
 
-    LoadFileItem(uri: vscode.Uri): Promise<Item | undefined>
+    LoadFileItem(uri: vscode.Uri): Promise<FileItem | undefined>
 
     LoadParentItem(element: Item): Promise<Item | undefined>
 
@@ -21,96 +20,70 @@ export interface ItemManager {
     SetFileItem(uri: vscode.Uri, fileItem: FileItem): void
 }
 
-export class ItemManagerFactory {
-    static Create(): ItemManager {
+export class ItemManagerFacadeFactory {
+    static Create(): ItemManagerFacade {
         return new ItemMangerFacadeImpl();
     }
 }
 
 
-class ItemMangerFacadeImpl implements ItemManager {
-    fileItemManager = ItemItemFactory.FileItemManager();
-    outlineItemManager = ItemItemFactory.OutlineItemManager(this.fileItemManager);
+class ItemMangerFacadeImpl implements ItemManagerFacade {
+    itemManager = ItemItemFactory.ItemManager();
 
     constructor() {
     }
 
     SetFileItem(uri: vscode.Uri, fileItem: FileItem): void {
-        this.fileItemManager.SetItems(uri, [fileItem]);
+        this.itemManager.SetItem(uri, fileItem);
     }
 
     GetFileItem(uri: vscode.Uri): FileItem | undefined {
-        let items = this.fileItemManager.GetItems(uri);
-        if (items && items.length === 1) {
-            return items[0] as FileItem;
+        let item = this.itemManager.GetItem(uri);
+        if (item) {
+            return item as FileItem;
         }
 
         return undefined;
     }
 
-    async LoadFileItem(uri: vscode.Uri): Promise<Item | undefined> {
-        let items = await this.fileItemManager.LoadItems(uri);
-        if (!items || items.length === 0) {
-            return;
-        }
-
-        return items[items.length - 1];
+    async LoadFileItem(uri: vscode.Uri): Promise<FileItem | undefined> {
+        return this.itemManager.LoadItem(uri);
     }
 
     async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<Item[] | undefined> {
-        return this.outlineItemManager.LoadItems(uri);
+        let fileItem = await this.LoadFileItem(uri);
+
+        if (!fileItem) {
+            return undefined;
+        }
+
+        return this.itemManager.LoadOutlineItems(fileItem as FileItem);
     }
 
     DeleteItem(element: Item): void {
-        this.fileItemManager.DeleteItems(element);
-
-        this.outlineItemManager.DeleteItems(element);
+        this.itemManager.DeleteItem(element);
     }
 
 
-    async LoadItemsInDir(element: Item): Promise<Item[]> {
-        return this.fileItemManager.LoadChildren(element);
+    async LoadItemsInDir(element: Item): Promise<FileItem[]> {
+        return this.itemManager.LoadChildren(element);
     }
 
     async LoadItemsInPath(uri: vscode.Uri): Promise<Item[]> {
-        let items = await this.fileItemManager.LoadParents(uri);
-        if (!items) {
-            return [];
-        }
-
-        let result = [];
-        for (let item of items) {
-            if (item.GetItemType() === ItemType.File) {
-                result.push(item as FileItem);
-            }
-        }
-
-        return result;
+        return this.itemManager.LoadParents(uri);
     }
 
-    async LoadOutlineItems(element: Item): Promise<OutlineItem[]> {
-        let items = await this.outlineItemManager.LoadChildren(element);
-        if (!items) {
-            return [];
-        }
-
-        let result = [];
-        for (let item of items) {
-            if (item.GetItemType() === ItemType.Outline) {
-                result.push(item as OutlineItem);
-            }
-        }
-
-        return result;
+    async LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]> {
+        return this.itemManager.LoadOutlineItems(fileItem);
     }
 
     async LoadParentItem(element: Item): Promise<Item | undefined> {
         if (element.GetItemType() === ItemType.File) {
-            return this.fileItemManager.LoadParent(element);
+            return this.itemManager.LoadParent(element);
         }
 
         if (element.GetItemType() === ItemType.Outline) {
-            return this.outlineItemManager.LoadParent(element);
+            return element.parent;
         }
 
         return undefined;

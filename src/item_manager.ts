@@ -7,31 +7,26 @@ import { getFileInfosInPath, getFileInfosInDir } from './file';
 
 
 interface ItemManager {
-    LoadItems(uri: vscode.Uri): Promise<Item[] | undefined>
+    LoadItem(uri: vscode.Uri): Promise<FileItem | undefined>
+    LoadParents(uri: vscode.Uri): Promise<Item[]>
     LoadParent(element: Item): Promise<Item | undefined>
-    LoadChildren(element: Item): Promise<Item[]>
-    LoadParents(uri: vscode.Uri): Promise<Item[] | undefined>
+    LoadChildren(element: Item): Promise<FileItem[]>
+    LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]>
 
-    GetItems(uri: vscode.Uri): Item[] | undefined
-    SetItems(uri: vscode.Uri, items: Item[]): void
-    DeleteItems(element: Item): void
-}
-
-interface FileItemManager extends ItemManager {
+    GetItem(uri: vscode.Uri): Item | undefined
+    SetItem(uri: vscode.Uri, items: Item): void
+    DeleteItem(element: Item): void
 }
 
 export class ItemItemFactory {
-    static FileItemManager(): FileItemManager {
-        return new FileItemManagerImpl();
-    }
-
-    static OutlineItemManager(fileItemLoader: FileItemManager): ItemManager {
-        return new OutlineItemManager(fileItemLoader);
+    static ItemManager(): ItemManager {
+        return new ItemManagerImpl();
     }
 }
 
-class FileItemManagerImpl implements FileItemManager {
+class ItemManagerImpl implements ItemManager {
     uri2FileInfo: Map<string, FileItem> = new Map();
+    uri2OutlineItems: Map<string, OutlineItem[]> = new Map();
     workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
 
     constructor() {
@@ -44,36 +39,31 @@ class FileItemManagerImpl implements FileItemManager {
         }
     }
 
-    async LoadItems(uri: vscode.Uri): Promise<Item[] | undefined> {
-        let items = this.GetItems(uri);
-        if (items && items.length > 0) {
-            return items;
+    async LoadItem(uri: vscode.Uri): Promise<FileItem | undefined> {
+        let item = this.GetItem(uri);
+        if (item) {
+            return item;
         }
 
-        items = await this.LoadParents(uri);
+        let items = await this.LoadParents(uri);
         if (!items || items.length === 0) {
             return;
         }
 
-        return items;
+        return items[items.length - 1];
     }
 
 
-    GetItems(uri: vscode.Uri): Item[] | undefined {
+    GetItem(uri: vscode.Uri): FileItem | undefined {
         let item = this.uri2FileInfo.get(uri.toString());
         if (!item) {
             return undefined;
         }
 
-        return [item];
+        return item;
     }
 
-    SetItems(uri: vscode.Uri, items: Item[]): void {
-        if (items.length !== 1) {
-            return;
-        }
-
-        const fileItem = items[0];
+    SetItem(uri: vscode.Uri, fileItem: Item): void {
         if (fileItem.GetItemType() !== ItemType.File) {
             return;
         }
@@ -81,13 +71,14 @@ class FileItemManagerImpl implements FileItemManager {
         this.uri2FileInfo.set(uri.toString(), fileItem as FileItem);
     }
 
-    DeleteItems(element: Item): void {
+    DeleteItem(element: Item): void {
         let uri = element.fileInfo.uri;
         this.uri2FileInfo.delete(uri.toString());
+        this.uri2OutlineItems.delete(uri.toString());
 
         if (element.GetItemType() === ItemType.File && element.fileInfo.type === vscode.FileType.Directory) {
             for (let child of element.children ?? []) {
-                this.DeleteItems(child);
+                this.DeleteItem(child);
             }
         }
     }
@@ -103,7 +94,7 @@ class FileItemManagerImpl implements FileItemManager {
         return element.parent;
     }
 
-    async LoadChildren(element: Item): Promise<Item[]> {
+    async LoadChildren(element: Item): Promise<FileItem[]> {
         let uri = element.fileInfo.uri;
 
         let fileItems = await getFileInfosInDir(uri, this.getIgnoredUris(uri));
@@ -129,6 +120,25 @@ class FileItemManagerImpl implements FileItemManager {
         return outlineExplorerFileInfos;
     }
 
+    async LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]> {
+        if (fileItem.fileInfo.type !== vscode.FileType.File) {
+            return [];
+        }
+
+        const uri = fileItem.fileInfo.uri;
+        const fileInfo = fileItem.fileInfo;
+        const outlineItems = await GetDocumentSymbols(uri);
+        let items = outlineItems.map(documentSymbol => {
+            return new OutlineItem(fileInfo, fileItem, documentSymbol);
+        });
+
+        fileItem.children = items;
+
+        this.uri2OutlineItems.set(fileInfo.uri.toString(), items);
+
+        return items;
+    }
+
     private getIgnoredUris(uri: vscode.Uri): vscode.Uri[] {
         let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
         let ignoredUris: vscode.Uri[] = [];
@@ -142,7 +152,7 @@ class FileItemManagerImpl implements FileItemManager {
         return ignoredUris;
     }
 
-    async LoadParents(uri: vscode.Uri): Promise<Item[] | undefined> {
+    async LoadParents(uri: vscode.Uri): Promise<FileItem[]> {
         let fileItemsInPath = await getFileInfosInPath(uri);
         if (!fileItemsInPath) {
             return [];
@@ -169,82 +179,5 @@ class FileItemManagerImpl implements FileItemManager {
         }
 
         return outlineExplorerFileInfos;
-    }
-}
-
-
-class OutlineItemManager implements ItemManager {
-    uri2OutlineItems: Map<string, OutlineItem[]> = new Map();
-    fileItemManager: ItemManager;
-
-    constructor(fileItemManager: ItemManager) {
-        this.fileItemManager = fileItemManager;
-    }
-
-    async LoadItems(uri: vscode.Uri): Promise<Item[] | undefined> {
-        let elements = await this.fileItemManager.LoadItems(uri);
-        if (!elements || elements.length === 0) {
-            return;
-        }
-
-        let element = elements[0];
-
-        const outlineItems = await GetDocumentSymbols(uri);
-        let items = outlineItems.map(documentSymbol => {
-            return new OutlineItem(element.fileInfo, element, documentSymbol);
-        });
-
-        element.children = items;
-
-        this.uri2OutlineItems.set(element.fileInfo.uri.toString(), items);
-
-        return items;
-
-    }
-    GetItems(uri: vscode.Uri): Item[] | undefined {
-        return this.uri2OutlineItems.get(uri.toString());
-    }
-    SetItems(uri: vscode.Uri, items: Item[]): void {
-        let outlineItems = [];
-        for (let item of items) {
-            if (item.GetItemType() !== ItemType.Outline) {
-                continue;
-            }
-
-            outlineItems.push(item as OutlineItem);
-        }
-
-        this.uri2OutlineItems.set(uri.toString(), outlineItems);
-    }
-
-    DeleteItems(element: Item): void {
-        let uri = element.fileInfo.uri;
-        this.uri2OutlineItems.delete(uri.toString());
-    }
-
-    async LoadParent(element: Item): Promise<Item | undefined> {
-        return element.parent;
-    }
-
-    async LoadChildren(element: Item): Promise<Item[]> {
-        if (element.fileInfo.type !== vscode.FileType.File) {
-            return [];
-        }
-
-        const uri = element.fileInfo.uri;
-        const outlineItems = await GetDocumentSymbols(uri);
-        let items = outlineItems.map(documentSymbol => {
-            return new OutlineItem(element.fileInfo, element, documentSymbol);
-        });
-
-        element.children = items;
-
-        this.uri2OutlineItems.set(element.fileInfo.uri.toString(), items);
-
-        return items;
-    }
-
-    async LoadParents(uri: vscode.Uri): Promise<Item[] | undefined> {
-        return undefined;
     }
 }
