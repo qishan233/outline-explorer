@@ -6,33 +6,31 @@ import { GetDocumentSymbols } from './outline';
 import { getFileInfosInPath, getFileInfosInDir } from './file';
 
 
-interface ItemLoader {
+interface ItemManager {
     LoadItems(uri: vscode.Uri): Promise<Item[] | undefined>
-    GetItems(uri: vscode.Uri): Item[] | undefined
-    SetItems(uri: vscode.Uri, items: Item[]): void
-
-    DeleteItems(element: Item): void
-
     LoadParent(element: Item): Promise<Item | undefined>
     LoadChildren(element: Item): Promise<Item[]>
-
     LoadParents(uri: vscode.Uri): Promise<Item[] | undefined>
+
+    GetItems(uri: vscode.Uri): Item[] | undefined
+    SetItems(uri: vscode.Uri, items: Item[]): void
+    DeleteItems(element: Item): void
 }
 
-interface FileInfoLoader extends ItemLoader {
+interface FileItemManager extends ItemManager {
 }
 
-export class ItemLoaderFactory {
-    static FileInfoLoader(): FileInfoLoader {
-        return new FileInfoLoaderImpl();
+export class ItemItemFactory {
+    static FileItemManager(): FileItemManager {
+        return new FileItemManagerImpl();
     }
 
-    static OutlineItemLoader(fileItemLoader: FileInfoLoader): ItemLoader {
-        return new OutlineItemLoader(fileItemLoader);
+    static OutlineItemManager(fileItemLoader: FileItemManager): ItemManager {
+        return new OutlineItemManager(fileItemLoader);
     }
 }
 
-class FileInfoLoaderImpl implements FileInfoLoader {
+class FileItemManagerImpl implements FileItemManager {
     uri2FileInfo: Map<string, FileItem> = new Map();
     workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
 
@@ -175,16 +173,16 @@ class FileInfoLoaderImpl implements FileInfoLoader {
 }
 
 
-class OutlineItemLoader implements ItemLoader {
+class OutlineItemManager implements ItemManager {
     uri2OutlineItems: Map<string, OutlineItem[]> = new Map();
-    fileItemLoader: ItemLoader;
+    fileItemManager: ItemManager;
 
-    constructor(fileItemLoader: ItemLoader) {
-        this.fileItemLoader = fileItemLoader;
+    constructor(fileItemManager: ItemManager) {
+        this.fileItemManager = fileItemManager;
     }
 
     async LoadItems(uri: vscode.Uri): Promise<Item[] | undefined> {
-        let elements = await this.fileItemLoader.LoadItems(uri);
+        let elements = await this.fileItemManager.LoadItems(uri);
         if (!elements || elements.length === 0) {
             return;
         }

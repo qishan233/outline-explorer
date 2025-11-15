@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { Item, ItemType, FileItem } from './item';
 import * as Logger from './log';
-import { ItemLoaderFacadeFactory } from './item_loader_facade';
+import { ItemManagerFactory } from './item_manger_facade';
 
 export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item> {
     private treeDataChangedEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item[]>();
     readonly onDidChangeTreeData: vscode.Event<Item | Item[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
 
-    private itemManager = ItemLoaderFacadeFactory.Create();
+    private itemManager = ItemManagerFactory.Create();
 
     constructor(context: vscode.ExtensionContext) { }
 
