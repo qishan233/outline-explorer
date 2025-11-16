@@ -80,18 +80,23 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         }
 
         // 并行执行所有 workspaceFolder 的展开操作
-        Promise.all(this.workspaceFolderItems.map(item => this.itemManager.ToExpand(item, 1))).then(() => {
-            this.UpdateGlobalCollapseState();
-            this.dataChanged(undefined);
+        await Promise.all(this.workspaceFolderItems.map(item => this.itemManager.ToExpand(item, 1))).then(affectedItems => {
+            affectedItems.forEach(item => {
+                this.dataChanged(item);
+            });
         });
+
+        this.UpdateGlobalCollapseState();
     }
 
     async ToCollapse(element: Item | undefined): Promise<void> {
-        await this.itemManager.ToCollapse(element).then(() => {
-            this.UpdateGlobalCollapseState();
+        let affectedItems = await this.itemManager.ToCollapse(element);
+
+        affectedItems.forEach(item => {
+            this.dataChanged(item);
         });
 
-        this.dataChanged(element);
+        this.UpdateGlobalCollapseState();
     }
 
 

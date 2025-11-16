@@ -22,8 +22,8 @@ interface ItemManager {
 
     OnDidExpand(element: Item): Promise<void>
     OnDidCollapse(element: Item): Promise<void>
-    ToExpand(element: Item | undefined, level: number): Promise<void>
-    ToCollapse(element: Item | undefined): Promise<void>
+    ToExpand(element: Item | undefined, level: number): Promise<Item[]>
+    ToCollapse(element: Item | undefined): Promise<Item[]>
     HasExpandedItem(): boolean
 }
 
@@ -206,14 +206,16 @@ class ItemManagerImpl implements ItemManager {
         return [];
     }
 
-    async ToExpand(item: Item | undefined, level: number = 0): Promise<void> {
+    async ToExpand(item: Item | undefined, level: number = 0): Promise<Item[]> {
         if (level <= 0 || !item) {
-            return;
+            return [];
         }
+
+        let affectedItems: Item[] = [];
 
         await item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Expanded);
         this.expandedItems.add(item);
-
+        affectedItems.push(item);
 
         if (!item.children) {
             let children = await this.LoadChildren(item);
@@ -223,35 +225,45 @@ class ItemManagerImpl implements ItemManager {
         for (let child of item.children ?? []) {
             if (!this.expandedItems.has(child)) {
                 if (child.GetItemType() === ItemType.File) {
-                    this.ToExpand(child, level - 1);
+                    let childAffectedItems = await this.ToExpand(child, level - 1);
+                    affectedItems.push(...childAffectedItems);
                 } else {
-                    this.ToExpand(child, level);
+                    let childAffectedItems = await this.ToExpand(child, level);
+                    affectedItems.push(...childAffectedItems);
                 }
             }
         }
 
-
+        return affectedItems;
     }
 
-    async ToCollapse(item: Item | undefined): Promise<void> {
+    async ToCollapse(item: Item | undefined): Promise<Item[]> {
+        let affectedItems: Item[] = [];
+
         if (item) {
             this.expandedItems.delete(item);
             item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Collapsed);
+            affectedItems.push(item);
+
             for (let child of item.children ?? []) {
                 if (this.expandedItems.has(child)) {
-                    this.ToCollapse(child);
+                    let childAffectedItems = await this.ToCollapse(child);
+                    affectedItems.push(...childAffectedItems);
                 }
 
             }
 
-            return;
+            return affectedItems;
         }
 
         for (let expandedItem of Array.from(this.expandedItems)) {
             if (this.expandedItems.has(expandedItem)) {
-                this.ToCollapse(expandedItem);
+                let childAffectedItems = await this.ToCollapse(expandedItem);
+                affectedItems.push(...childAffectedItems);
             }
         }
+
+        return affectedItems;
     }
 
     async OnDidExpand(item: Item): Promise<void> {

@@ -226,12 +226,10 @@ export class OutlineExplorerTreeView {
     }
 
     async OnDidExpand(e: vscode.TreeViewExpansionEvent<Item>): Promise<void> {
-        console.log("OnDidExpand", e);
         this.dataProvider.OnDidExpand(e.element);
     }
 
     async OnDidCollapse(e: vscode.TreeViewExpansionEvent<Item>): Promise<void> {
-        console.log("OnDidCollapse", e);
         this.dataProvider.OnDidCollapse(e.element);
     }
 
