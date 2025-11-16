@@ -12,20 +12,46 @@ const DelayFirstRefreshTime = 2000;
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
-
-
     private dataProvider: OutlineExplorerDataProvider;
+
 
     private treeViewVisible = false;
     private ignoreActiveEditorChange = false;
 
     constructor(context: vscode.ExtensionContext) {
+        // 注册树视图
         this.dataProvider = new OutlineExplorerDataProvider(context);
-
         this.treeView = vscode.window.createTreeView('outline-explorer', { treeDataProvider: this.dataProvider });
 
-        // 注册插件相关组件
+        // 注册 tree view
         context.subscriptions.push(this.treeView);
+
+        // 注册命令
+        this.registerCommands(context);
+
+        // 注册树视图事件处理程序
+        this.registerTreeViewEventHandlers();
+
+        // 注册 VSCode 事件处理程序
+        this.registerVSCodeEventHandlers();
+
+        // 初始化
+        this.Init();
+    }
+
+    registerVSCodeEventHandlers(): void {
+        const em = eventHandler.GlobalVSCodeEventHandlerManager;
+
+        em.RegisterTextDocumentChangedEventHandler(this);
+        em.RegisterActiveTextEditorChangedEventHandler(this);
+        em.RegisterTextEditorSelectionChangedEventHandler(this);
+        em.RegisterWorkspaceFoldersChangedEventHandler(this);
+        em.RegisterRenameFilesEventHandler(this);
+        em.RegisterCreateFilesEventHandler(this);
+        em.RegisterDeleteFilesEventHandler(this);
+    }
+
+    registerCommands(context: vscode.ExtensionContext): void {
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.item-clicked', async (item) => {
             await this.OnClick(item);
         }, this));
@@ -38,35 +64,31 @@ export class OutlineExplorerTreeView {
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.collapse-all', async (item) => {
             await this.ToCollapse(item);
         }, this));
+    }
 
-        this.setCanExpand(true);
-        this.setCanCollapse(false);
-
-        // 注册树视图事件处理程序
+    registerTreeViewEventHandlers(): void {
         this.treeView.onDidChangeVisibility(e => this.OnVisibilityChanged(e));
 
         this.treeView.onDidCollapseElement(e => this.OnDidCollapse(e));
+
         this.treeView.onDidExpandElement(e => this.OnDidExpand(e));
-
-        // 注册事件处理程序
-        const eventHandlerManager = eventHandler.GlobalVSCodeEventHandlerManager;
-
-        eventHandlerManager.RegisterTextDocumentChangedEventHandler(this);
-        eventHandlerManager.RegisterActiveTextEditorChangedEventHandler(this);
-        eventHandlerManager.RegisterTextEditorSelectionChangedEventHandler(this);
-        eventHandlerManager.RegisterWorkspaceFoldersChangedEventHandler(this);
-        eventHandlerManager.RegisterRenameFilesEventHandler(this);
-        eventHandlerManager.RegisterCreateFilesEventHandler(this);
-        eventHandlerManager.RegisterDeleteFilesEventHandler(this);
-
     }
 
-    setCanExpand(canExpand: boolean) {
-        vscode.commands.executeCommand('setContext', 'code-lens.context.can-expand', canExpand);
-    }
+    Init() {
+        this.setCanExpand(true);
+        this.setCanCollapse(false);
 
-    setCanCollapse(canCollapse: boolean) {
-        vscode.commands.executeCommand('setContext', 'code-lens.context.can-collapse', canCollapse);
+        // wait the extension that provide the outline information to be ready
+        setTimeout(async () => {
+            Logger.Info('First Refresh Begin');
+
+            await this.Refresh(undefined);
+
+            Logger.Info('First Refresh End');
+
+            await this.revealActiveTextEditor();
+
+        }, DelayFirstRefreshTime);
     }
 
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
@@ -213,21 +235,6 @@ export class OutlineExplorerTreeView {
     }
 
 
-
-    Init() {
-        // wait the extension that provide the outline information to be ready
-        setTimeout(async () => {
-            Logger.Info('First Refresh Begin');
-
-            await this.Refresh(undefined);
-
-            Logger.Info('First Refresh End');
-
-            await this.revealActiveTextEditor();
-
-        }, DelayFirstRefreshTime);
-    }
-
     async revealActiveTextEditor() {
         let activeEditor = vscode.window.activeTextEditor;
         let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -237,5 +244,11 @@ export class OutlineExplorerTreeView {
         } else if (workspaceFolder) {
             await this.RevealUri(workspaceFolder.uri);
         }
+    }
+    setCanExpand(canExpand: boolean) {
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-expand', canExpand);
+    }
+    setCanCollapse(canCollapse: boolean) {
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-collapse', canCollapse);
     }
 }

@@ -11,8 +11,6 @@ import * as logger from './log';
 export function activate(context: vscode.ExtensionContext) {
 	const treeView = new OutlineExplorerTreeView(context);
 
-	treeView.Init();
-
 	logger.Info('Congratulations, your extension "outline-explorer" is now active!');
 }
 
