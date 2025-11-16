@@ -11,10 +11,41 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
     constructor(context: vscode.ExtensionContext) { }
 
+    /**===================== vscode.TreeDataProvider implementation ==========================**/
+    getTreeItem(element: Item): vscode.TreeItem {
+        return element.GetTreeItem();
+    }
+
+    async getParent(element: Item): Promise<Item | undefined> {
+        if (!element) {
+            return undefined;
+        }
+
+        if (element.parent) {
+            return element.parent;
+        }
+
+        const uri = element.fileInfo.uri;
+
+        let fileItems = await this.itemManager.LoadParents(uri);
+        if (!fileItems || fileItems.length === 0) {
+            element.parent = undefined;
+        }
+
+        return element.parent;
+    }
+
+    async getChildren(element?: Item): Promise<Item[]> {
+        if (element) {
+            return this.getChildrenOfElement(element);
+        }
+
+        return this.loadWorkspaceFolderItems();
+    }
+
     async LoadFileItem(uri: vscode.Uri): Promise<Item | undefined> {
         return this.itemManager.LoadFileItem(uri);
     }
-
 
     async Refresh(element: Item | undefined): Promise<void> {
         if (!element) {
@@ -27,57 +58,42 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         this.dataChanged(element);
     }
 
-    /**
-     * Expand the element
-     * @param element 
-     * @returns 
-     */
     async ToExpand(element: Item | undefined): Promise<void> {
         if (!element) {
             return;
         }
 
+        await this.itemManager.ToExpand(element);
 
         this.dataChanged(element);
     }
 
-    /**
-     * Collapse the element
-     * @param element 
-     * @returns 
-     */
     async ToCollapse(element: Item | undefined): Promise<void> {
+        if (!element) {
+            return;
+        }
 
+        await this.itemManager.ToCollapse(element);
+
+        this.dataChanged(element);
     }
 
-    /**
-     * On expand the element record the element
-     * @param element 
-     * @returns 
-     */
+
     async OnDidExpand(element: Item | undefined): Promise<void> {
         if (!element) {
             return;
         }
 
-        this.dataChanged(element);
+        this.itemManager.OnDidExpand(element);
     }
 
-    /**
-     * On collapse the element remove the element from the record
-     * @param element 
-     * @returns 
-     */
+
     async OnDidCollapse(element: Item | undefined): Promise<void> {
         if (!element) {
             return;
         }
 
-        this.dataChanged(element);
-    }
-
-    private dataChanged(item: Item | Item[] | void | null | undefined) {
-        this.treeDataChangedEventEmitter.fire(item);
+        this.itemManager.OnDidCollapse(element);
     }
 
     async AddOutlineExplorerFileItem(uri: vscode.Uri): Promise<Item | undefined> {
@@ -123,67 +139,6 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         return fileItem;
     }
 
-    // vscode.TreeDataProvider implementation
-    getTreeItem(element: Item): vscode.TreeItem {
-        return element.GetTreeItem();
-    }
-
-    // vscode.TreeDataProvider implementation
-    async getParent(element: Item): Promise<Item | undefined> {
-        if (!element) {
-            return undefined;
-        }
-
-        if (element.parent) {
-            return element.parent;
-        }
-
-        const uri = element.fileInfo.uri;
-
-        let fileItems = await this.itemManager.LoadParents(uri);
-        if (!fileItems || fileItems.length === 0) {
-            element.parent = undefined;
-        }
-
-        return element.parent;
-    }
-
-    // vscode.TreeDataProvider implementation
-    async getChildren(element?: Item): Promise<Item[]> {
-        if (element) {
-            return this.getChildrenOfElement(element);
-        }
-
-        return this.loadWorkspaceFolderItems();
-    }
-
-    async getChildrenOfElement(element: Item): Promise<Item[]> {
-        if (element.children) {
-            return element.children;
-        }
-
-        if (element.GetItemType() === ItemType.Outline) {
-            return [];
-        }
-
-        if (element.GetItemType() !== ItemType.File) {
-            Logger.Error('getChildren Invalid OutlineExploreItem', element);
-            throw new Error('getChildren Invalid OutlineExploreItem');
-        }
-
-        let children: Item[] | undefined = undefined;
-
-        // TODO duplicate code with Refresh
-        if (element.fileInfo.type === vscode.FileType.Directory) {
-            children = await this.itemManager.LoadFileItemChildren(element);
-        } else {
-            children = await this.itemManager.LoadOutlineItemChildren(element as FileItem);
-        }
-
-        element.children = children;
-
-        return children;
-    }
 
     async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<Item[] | undefined> {
         let fileItem = await this.itemManager.LoadFileItem(uri);
@@ -200,6 +155,56 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         this.dataChanged(fileItem);
 
         return items;
+    }
+
+    async GetMatchedItemInRange(uri: vscode.Uri, selection: vscode.Selection): Promise<Item | undefined> {
+        let fileItem = this.itemManager.GetItem(uri);
+        if (!fileItem) {
+            return;
+        }
+
+        let items = await this.itemManager.LoadOutlineItemChildren(fileItem);
+        if (!items) {
+            return;
+        }
+
+        for (let item of items) {
+            let result = item.GetMatchedItemInRange(selection);
+            if (result) {
+                return result;
+            }
+        }
+
+        return;
+    }
+
+
+    /**===================== internal methods ==========================**/
+    private dataChanged(item: Item | Item[] | void | null | undefined) {
+        this.treeDataChangedEventEmitter.fire(item);
+    }
+
+
+
+    private async getChildrenOfElement(element: Item): Promise<Item[]> {
+        if (element.children) {
+            return element.children;
+        }
+
+        if (element.GetItemType() === ItemType.Outline) {
+            return [];
+        }
+
+        if (element.GetItemType() !== ItemType.File) {
+            Logger.Error('getChildren Invalid OutlineExploreItem', element);
+            throw new Error('getChildren Invalid OutlineExploreItem');
+        }
+
+        let children = await this.itemManager.LoadChildren(element);
+
+        element.children = children;
+
+        return children;
     }
 
     private async loadWorkspaceFolderItems(): Promise<Item[]> {
@@ -226,27 +231,6 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         }
 
         return workspaceFolderItems;
-    }
-
-    async GetMatchedItemInRange(uri: vscode.Uri, selection: vscode.Selection): Promise<Item | undefined> {
-        let fileItem = this.itemManager.GetItem(uri);
-        if (!fileItem) {
-            return;
-        }
-
-        let items = await this.itemManager.LoadOutlineItemChildren(fileItem);
-        if (!items) {
-            return;
-        }
-
-        for (let item of items) {
-            let result = item.GetMatchedItemInRange(selection);
-            if (result) {
-                return result;
-            }
-        }
-
-        return;
     }
 
 }

@@ -12,11 +12,19 @@ interface ItemManager {
     LoadFileItemChildren(element: Item): Promise<FileItem[]>
     LoadOutlineItemChildren(fileItem: FileItem): Promise<OutlineItem[]>
 
+    LoadChildren(element: Item): Promise<Item[]>
+
     GetItem(uri: vscode.Uri): FileItem | undefined
     SetItem(uri: vscode.Uri, items: Item): void
     DeleteItem(element: Item): void
 
     Refresh(element: Item): Promise<void>
+
+    OnDidExpand(element: Item): Promise<void>
+    OnDidCollapse(element: Item): Promise<void>
+
+    ToExpand(element: Item): Promise<void>
+    ToCollapse(element: Item): Promise<void>
 }
 
 export class ItemItemFactory {
@@ -29,6 +37,8 @@ class ItemManagerImpl implements ItemManager {
     uri2FileInfo: Map<string, FileItem> = new Map();
     uri2OutlineItems: Map<string, OutlineItem[]> = new Map();
     workspaceFolder2IgnoreUris: Map<string, vscode.Uri[]> = new Map();
+
+    expandedItems: Set<Item> = new Set();
 
     constructor() {
         const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
@@ -178,12 +188,33 @@ class ItemManagerImpl implements ItemManager {
             return;
         }
 
-        let fileItem = element as FileItem;
+        await this.LoadChildren(element);
+    }
 
-        if (fileItem.fileInfo.type === vscode.FileType.Directory) {
-            await this.LoadFileItemChildren(fileItem);
-        } else if (element.fileInfo.type === vscode.FileType.File) {
-            await this.LoadOutlineItemChildren(fileItem);
+    async LoadChildren(element: Item): Promise<Item[]> {
+        if (element.GetItemType() === ItemType.File) {
+            return await this.LoadFileItemChildren(element as FileItem);
+        } else if (element.GetItemType() === ItemType.Outline) {
+            return await this.LoadOutlineItemChildren(element as FileItem);
         }
+
+        return [];
+    }
+
+    async ToExpand(element: Item): Promise<void> {
+        
+    }
+
+    async ToCollapse(element: Item): Promise<void> {
+
+    }
+
+
+    async OnDidExpand(element: Item): Promise<void> {
+        this.expandedItems.add(element);
+    }
+
+    async OnDidCollapse(element: Item): Promise<void> {
+        this.expandedItems.delete(element);
     }
 }
