@@ -93,6 +93,10 @@ export class OutlineExplorerTreeView {
         }, DelayFirstRefreshTime);
     }
 
+    Dispose() {
+        this.treeView.dispose();
+    }
+
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
         this.treeViewVisible = e.visible;
         if (this.treeViewVisible) {

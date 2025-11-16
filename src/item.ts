@@ -177,16 +177,20 @@ class TreeItemFactoryImpl implements TreeItemFactory {
 
         let treeItem: vscode.TreeItem;
 
+        let tip = "";
         if (itemType === ItemType.File) {
             treeItem = this.fromFileItem(element as FileItem);
+            tip = element.fileInfo.uri.path;
         } else if (itemType === ItemType.Outline) {
-            treeItem = this.fromOutlineItem(element as OutlineItem);
+            let outlineItem = element as OutlineItem;
+            treeItem = this.fromOutlineItem(outlineItem);
+            tip = outlineItem.outlineInfo.documentSymbol.name;
         } else {
             Logger.Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ', element);
             throw new Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ');
         }
 
-        treeItem.id = await uuid.GenerateUid();
+        treeItem.id = tip + await uuid.GenerateUid();
 
         return treeItem;
     }

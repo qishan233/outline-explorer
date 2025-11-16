@@ -4,12 +4,12 @@ import * as vscode from 'vscode';
 import { OutlineExplorerTreeView } from './tree_view';
 import * as logger from './log';
 
-
+let treeView: OutlineExplorerTreeView;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	const treeView = new OutlineExplorerTreeView(context);
+	treeView = new OutlineExplorerTreeView(context);
 
 	logger.Info('Congratulations, your extension "outline-explorer" is now active!');
 }
@@ -17,4 +17,5 @@ export function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export function deactivate() {
 	logger.Info("outline-explorer deactivate");
+	treeView.Dispose();
 }
