@@ -22,7 +22,7 @@ interface ItemManager {
 
     OnDidExpand(element: Item): Promise<void>
     OnDidCollapse(element: Item): Promise<void>
-    ToExpand(element: Item): Promise<void>
+    ToExpand(element: Item | undefined, level: number): Promise<void>
     ToCollapse(element: Item | undefined): Promise<void>
     HasExpandedItem(): boolean
 }
@@ -188,7 +188,8 @@ class ItemManagerImpl implements ItemManager {
             return;
         }
 
-        await this.LoadChildren(element);
+        let children = await this.LoadChildren(element);
+        element.children = children;
     }
 
     async LoadChildren(element: Item): Promise<Item[] | undefined> {
@@ -205,12 +206,32 @@ class ItemManagerImpl implements ItemManager {
         return [];
     }
 
-    async ToExpand(item: Item): Promise<void> {
+    async ToExpand(item: Item | undefined, level: number = 0): Promise<void> {
+        if (level <= 0) {
+            return;
+        }
+
+        if (item) {
+            await item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Expanded);
+            this.expandedItems.add(item);
+
+            if (!item.children) {
+                let children = await this.LoadChildren(item);
+                item.children = children;
+            }
+
+            for (let child of item.children ?? []) {
+                if (!this.expandedItems.has(child)) {
+                    this.ToExpand(child, level - 1);
+                }
+            }
+            return;
+        }
+
 
     }
 
     async ToCollapse(item: Item | undefined): Promise<void> {
-        console.log("ToCollapse ItemManager", item);
         if (item) {
             this.expandedItems.delete(item);
             item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Collapsed);
@@ -232,17 +253,14 @@ class ItemManagerImpl implements ItemManager {
     }
 
     async OnDidExpand(item: Item): Promise<void> {
-        console.log("OnDidExpand ItemManager", item);
         this.expandedItems.add(item);
     }
 
     async OnDidCollapse(item: Item): Promise<void> {
-        console.log("OnDidCollapse ItemManager", item);
         this.expandedItems.delete(item);
     }
 
     HasExpandedItem(): boolean {
-        console.log('LixuanDebug HasExpandedItem', this.expandedItems);
         return this.expandedItems.size > 0;
     }
 

@@ -3,11 +3,15 @@ import { Item, ItemType, FileItem } from './item';
 import * as Logger from './log';
 import { ItemItemFactory } from './item_manager';
 
+const MaxExpandLevel = 2;
+
 export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item> {
     private treeDataChangedEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item[]>();
     readonly onDidChangeTreeData: vscode.Event<Item | Item[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
 
     private itemManager = ItemItemFactory.ItemManager();
+
+    private workspaceFolderItems: Item[] = [];
 
     constructor(context: vscode.ExtensionContext) { }
 
@@ -60,18 +64,29 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     async ToExpand(element: Item | undefined): Promise<void> {
-        if (!element) {
+        if (element) {
+            await this.itemManager.ToExpand(element, MaxExpandLevel).then(() => {
+                this.UpdateGlobalCollapseState();
+            });
+
+            this.dataChanged(element);
+
             return;
         }
 
-        await this.itemManager.ToExpand(element);
+        // 获取所有 workspaceFolder 对应的 Item
+        if (this.workspaceFolderItems.length === 0) {
+            return;
+        }
 
-        this.dataChanged(element);
+        // 并行执行所有 workspaceFolder 的展开操作
+        Promise.all(this.workspaceFolderItems.map(item => this.itemManager.ToExpand(item, 1))).then(() => {
+            this.UpdateGlobalCollapseState();
+            this.dataChanged(undefined);
+        });
     }
 
     async ToCollapse(element: Item | undefined): Promise<void> {
-        console.log("ToCollapse Data Provider", element);
-
         await this.itemManager.ToCollapse(element).then(() => {
             this.UpdateGlobalCollapseState();
         });
@@ -82,11 +97,8 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
     async OnDidExpand(element: Item | undefined): Promise<void> {
         if (!element) {
-            console.log("OnDidExpand undefined", element);
             return;
         }
-
-        console.log("OnDidExpand Data Provider", element);
 
         this.itemManager.OnDidExpand(element).then(() => {
             this.UpdateGlobalCollapseState();
@@ -96,11 +108,8 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
     async OnDidCollapse(element: Item | undefined): Promise<void> {
         if (!element) {
-            console.log("OnDidCollapse undefined", element);
             return;
         }
-
-        console.log("OnDidCollapse Data Provider", element);
 
         this.itemManager.OnDidCollapse(element).then(() => {
             this.UpdateGlobalCollapseState();
@@ -224,7 +233,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     private async loadWorkspaceFolderItems(): Promise<Item[]> {
-        const workspaceFolders = (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file');
+        const workspaceFolders = this.getWorkspaceFolders();
         if (workspaceFolders.length === 0) {
             return [];
         }
@@ -246,7 +255,18 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
             workspaceFolderItems.push(workspaceFolderItem);
         }
 
+        this.workspaceFolderItems = workspaceFolderItems;
+
         return workspaceFolderItems;
+    }
+
+    private getWorkspaceFolders(): vscode.WorkspaceFolder[] {
+        const workspaceFolders = (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file');
+        if (workspaceFolders.length === 0) {
+            return [];
+        }
+
+        return workspaceFolders;
     }
 
     private setCanExpand(canExpand: boolean) {
