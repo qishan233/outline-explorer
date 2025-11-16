@@ -22,14 +22,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
             return;
         }
 
-        this.itemManager.DeleteItem(element);
-
-        // TODO use strategy pattern to handle different types of Item
-        if (element.fileInfo.type === vscode.FileType.Directory) {
-            await this.itemManager.LoadFileItemChildren(element);
-        } else if (element.fileInfo.type === vscode.FileType.File) {
-            await this.itemManager.LoadOutlineItemChildren(element as FileItem);
-        }
+        await this.itemManager.Refresh(element);
 
         this.dataChanged(element);
     }

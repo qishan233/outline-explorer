@@ -42,6 +42,7 @@ export abstract class Item {
         }
         return this.treeItem;
     }
+
 }
 
 export class FileItem extends Item {

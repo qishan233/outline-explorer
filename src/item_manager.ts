@@ -15,6 +15,8 @@ interface ItemManager {
     GetItem(uri: vscode.Uri): FileItem | undefined
     SetItem(uri: vscode.Uri, items: Item): void
     DeleteItem(element: Item): void
+
+    Refresh(element: Item): Promise<void>
 }
 
 export class ItemItemFactory {
@@ -167,5 +169,21 @@ class ItemManagerImpl implements ItemManager {
         }
 
         return fileInfos;
+    }
+
+    async Refresh(element: Item): Promise<void> {
+        this.DeleteItem(element);
+
+        if (element.GetItemType() !== ItemType.File) {
+            return;
+        }
+
+        let fileItem = element as FileItem;
+
+        if (fileItem.fileInfo.type === vscode.FileType.Directory) {
+            await this.LoadFileItemChildren(fileItem);
+        } else if (element.fileInfo.type === vscode.FileType.File) {
+            await this.LoadOutlineItemChildren(fileItem);
+        }
     }
 }
