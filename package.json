@@ -69,6 +69,16 @@
           "command": "outline-explorer.refresh",
           "when": "view == outline-explorer && (viewItem == file || viewItem == folder)",
           "group": "navigation"
+        },
+        {
+          "command": "outline-explorer.expand-all",
+          "when": "view == outline-explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "outline-explorer.collapse-all",
+          "when": "view == outline-explorer",
+          "group": "navigation"
         }
       ],
       "view/title": [

@@ -12,7 +12,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     constructor(context: vscode.ExtensionContext) { }
 
     /**===================== vscode.TreeDataProvider implementation ==========================**/
-    getTreeItem(element: Item): vscode.TreeItem {
+    async getTreeItem(element: Item): Promise<vscode.TreeItem> {
         return element.GetTreeItem();
     }
 
@@ -34,14 +34,15 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         return element.parent;
     }
-
-    async getChildren(element?: Item): Promise<Item[]> {
+    async getChildren(element?: Item): Promise<Item[] | undefined> {
         if (element) {
             return this.getChildrenOfElement(element);
         }
 
         return this.loadWorkspaceFolderItems();
     }
+
+    /**===================== methods for tree view ==========================**/
 
     async LoadFileItem(uri: vscode.Uri): Promise<Item | undefined> {
         return this.itemManager.LoadFileItem(uri);
@@ -69,11 +70,11 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     async ToCollapse(element: Item | undefined): Promise<void> {
-        if (!element) {
-            return;
-        }
+        console.log("ToCollapse Data Provider", element);
 
-        await this.itemManager.ToCollapse(element);
+        await this.itemManager.ToCollapse(element).then(() => {
+            this.UpdateGlobalCollapseState();
+        });
 
         this.dataChanged(element);
     }
@@ -81,19 +82,29 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
     async OnDidExpand(element: Item | undefined): Promise<void> {
         if (!element) {
+            console.log("OnDidExpand undefined", element);
             return;
         }
 
-        this.itemManager.OnDidExpand(element);
+        console.log("OnDidExpand Data Provider", element);
+
+        this.itemManager.OnDidExpand(element).then(() => {
+            this.UpdateGlobalCollapseState();
+        });
     }
 
 
     async OnDidCollapse(element: Item | undefined): Promise<void> {
         if (!element) {
+            console.log("OnDidCollapse undefined", element);
             return;
         }
 
-        this.itemManager.OnDidCollapse(element);
+        console.log("OnDidCollapse Data Provider", element);
+
+        this.itemManager.OnDidCollapse(element).then(() => {
+            this.UpdateGlobalCollapseState();
+        });
     }
 
     async AddOutlineExplorerFileItem(uri: vscode.Uri): Promise<Item | undefined> {
@@ -178,6 +189,12 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         return;
     }
 
+    UpdateGlobalCollapseState() {
+        let hasExpandedItem = this.itemManager.HasExpandedItem();
+        this.setCanExpand(!hasExpandedItem);
+        this.setCanCollapse(hasExpandedItem);
+    }
+
 
     /**===================== internal methods ==========================**/
     private dataChanged(item: Item | Item[] | void | null | undefined) {
@@ -185,8 +202,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
 
-
-    private async getChildrenOfElement(element: Item): Promise<Item[]> {
+    private async getChildrenOfElement(element: Item): Promise<Item[] | undefined> {
         if (element.children) {
             return element.children;
         }
@@ -231,6 +247,13 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         }
 
         return workspaceFolderItems;
+    }
+
+    private setCanExpand(canExpand: boolean) {
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-expand', canExpand);
+    }
+    private setCanCollapse(canCollapse: boolean) {
+        vscode.commands.executeCommand('setContext', 'code-lens.context.can-collapse', canCollapse);
     }
 
 }

@@ -75,8 +75,7 @@ export class OutlineExplorerTreeView {
     }
 
     Init() {
-        this.setCanExpand(true);
-        this.setCanCollapse(false);
+        this.dataProvider.UpdateGlobalCollapseState();
 
         // wait the extension that provide the outline information to be ready
         setTimeout(async () => {
@@ -224,13 +223,12 @@ export class OutlineExplorerTreeView {
     }
 
     async OnDidExpand(e: vscode.TreeViewExpansionEvent<Item>): Promise<void> {
-        console.log('OnDidExpand', e.element);
+        console.log("OnDidExpand", e);
         this.dataProvider.OnDidExpand(e.element);
     }
 
     async OnDidCollapse(e: vscode.TreeViewExpansionEvent<Item>): Promise<void> {
-        console.log('OnDidCollapse', e.element);
-
+        console.log("OnDidCollapse", e);
         this.dataProvider.OnDidCollapse(e.element);
     }
 
@@ -244,11 +242,5 @@ export class OutlineExplorerTreeView {
         } else if (workspaceFolder) {
             await this.RevealUri(workspaceFolder.uri);
         }
-    }
-    setCanExpand(canExpand: boolean) {
-        vscode.commands.executeCommand('setContext', 'code-lens.context.can-expand', canExpand);
-    }
-    setCanCollapse(canCollapse: boolean) {
-        vscode.commands.executeCommand('setContext', 'code-lens.context.can-collapse', canCollapse);
     }
 }

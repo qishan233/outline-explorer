@@ -12,7 +12,7 @@ interface ItemManager {
     LoadFileItemChildren(element: Item): Promise<FileItem[]>
     LoadOutlineItemChildren(fileItem: FileItem): Promise<OutlineItem[]>
 
-    LoadChildren(element: Item): Promise<Item[]>
+    LoadChildren(element: Item): Promise<Item[] | undefined>
 
     GetItem(uri: vscode.Uri): FileItem | undefined
     SetItem(uri: vscode.Uri, items: Item): void
@@ -22,9 +22,9 @@ interface ItemManager {
 
     OnDidExpand(element: Item): Promise<void>
     OnDidCollapse(element: Item): Promise<void>
-
     ToExpand(element: Item): Promise<void>
-    ToCollapse(element: Item): Promise<void>
+    ToCollapse(element: Item | undefined): Promise<void>
+    HasExpandedItem(): boolean
 }
 
 export class ItemItemFactory {
@@ -191,30 +191,59 @@ class ItemManagerImpl implements ItemManager {
         await this.LoadChildren(element);
     }
 
-    async LoadChildren(element: Item): Promise<Item[]> {
-        if (element.GetItemType() === ItemType.File) {
+    async LoadChildren(element: Item): Promise<Item[] | undefined> {
+        if (element.GetItemType() === ItemType.Outline) {
+            return element.children;
+        }
+
+        if (element.fileInfo.type === vscode.FileType.Directory) {
             return await this.LoadFileItemChildren(element as FileItem);
-        } else if (element.GetItemType() === ItemType.Outline) {
+        } else if (element.fileInfo.type === vscode.FileType.File) {
             return await this.LoadOutlineItemChildren(element as FileItem);
         }
 
         return [];
     }
 
-    async ToExpand(element: Item): Promise<void> {
-        
-    }
-
-    async ToCollapse(element: Item): Promise<void> {
+    async ToExpand(item: Item): Promise<void> {
 
     }
 
+    async ToCollapse(item: Item | undefined): Promise<void> {
+        console.log("ToCollapse ItemManager", item);
+        if (item) {
+            this.expandedItems.delete(item);
+            item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Collapsed);
+            for (let child of item.children ?? []) {
+                if (this.expandedItems.has(child)) {
+                    this.ToCollapse(child);
+                }
 
-    async OnDidExpand(element: Item): Promise<void> {
-        this.expandedItems.add(element);
+            }
+
+            return;
+        }
+
+        for (let expandedItem of Array.from(this.expandedItems)) {
+            if (this.expandedItems.has(expandedItem)) {
+                this.ToCollapse(expandedItem);
+            }
+        }
     }
 
-    async OnDidCollapse(element: Item): Promise<void> {
-        this.expandedItems.delete(element);
+    async OnDidExpand(item: Item): Promise<void> {
+        console.log("OnDidExpand ItemManager", item);
+        this.expandedItems.add(item);
     }
+
+    async OnDidCollapse(item: Item): Promise<void> {
+        console.log("OnDidCollapse ItemManager", item);
+        this.expandedItems.delete(item);
+    }
+
+    HasExpandedItem(): boolean {
+        console.log('LixuanDebug HasExpandedItem', this.expandedItems);
+        return this.expandedItems.size > 0;
+    }
+
 }

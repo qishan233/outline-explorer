@@ -25,24 +25,31 @@ export abstract class Item {
 
     abstract GetItemType(): ItemType;
     abstract OnClick(): void;
-    abstract CreateTreeItem(): vscode.TreeItem;
-    async CloneTreeItem(): Promise<vscode.TreeItem> {
-        if (!this.treeItem) {
-            return this.CreateTreeItem();
-        }
-        let id = await uuid.GenerateUid();
+    abstract CreateTreeItem(): Promise<vscode.TreeItem>;
 
-        this.treeItem.id = id;
+
+    async GetTreeItem(): Promise<vscode.TreeItem> {
+        if (!this.treeItem) {
+            this.treeItem = await this.CreateTreeItem();
+        }
+
         return this.treeItem;
     }
 
-    GetTreeItem(): vscode.TreeItem {
+    /**
+     * Set the collapsible state of the item. Maintain the item_manager's expandedItems set before this method is called.
+     * @param state 
+     */
+    async SetCollapsibleState(state: vscode.TreeItemCollapsibleState) {
         if (!this.treeItem) {
-            this.treeItem = this.CreateTreeItem();
+            this.treeItem = await this.CreateTreeItem();
+        } else {
+            let id = await uuid.GenerateUid();
+            this.treeItem.id = id;
         }
-        return this.treeItem;
-    }
 
+        this.treeItem.collapsibleState = state;
+    }
 }
 
 export class FileItem extends Item {
@@ -60,7 +67,7 @@ export class FileItem extends Item {
         vscode.commands.executeCommand('vscode.open', this.fileInfo.uri);
     }
 
-    CreateTreeItem(): vscode.TreeItem {
+    CreateTreeItem(): Promise<vscode.TreeItem> {
         return this.treeItemFactory.Create(this);
     }
 }
@@ -106,7 +113,7 @@ export class OutlineItem extends Item {
         await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.Active, selection: selection });
     }
 
-    CreateTreeItem(): vscode.TreeItem {
+    async CreateTreeItem(): Promise<vscode.TreeItem> {
         return this.treeItemFactory.Create(this);
     }
 
@@ -151,7 +158,7 @@ export class OutlineItem extends Item {
 
 
 interface TreeItemFactory {
-    Create(element: Item): vscode.TreeItem;
+    Create(element: Item): Promise<vscode.TreeItem>;
 }
 
 function NewTreeItemFactory(): TreeItemFactory {
@@ -160,17 +167,23 @@ function NewTreeItemFactory(): TreeItemFactory {
 
 
 class TreeItemFactoryImpl implements TreeItemFactory {
-    Create(element: Item): vscode.TreeItem {
+    async Create(element: Item): Promise<vscode.TreeItem> {
         let itemType = element.GetItemType();
 
+        let treeItem: vscode.TreeItem;
+
         if (itemType === ItemType.File) {
-            return this.fromFileItem(element as FileItem);
+            treeItem = this.fromFileItem(element as FileItem);
         } else if (itemType === ItemType.Outline) {
-            return this.fromOutlineItem(element as OutlineItem);
+            treeItem = this.fromOutlineItem(element as OutlineItem);
+        } else {
+            Logger.Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ', element);
+            throw new Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ');
         }
 
-        Logger.Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ', element);
-        throw new Error('TreeItemFactoryImpl Create Invalid OutlineExploreItem ');
+        treeItem.id = await uuid.GenerateUid();
+
+        return treeItem;
     }
 
     fromFileItem(element: FileItem): vscode.TreeItem {
