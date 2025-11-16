@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { Item, ItemType, FileItem } from './item';
 import * as Logger from './log';
-import { ItemManagerFacadeFactory } from './item_manger_facade';
+import { ItemItemFactory } from './item_manager';
 
 export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item> {
     private treeDataChangedEventEmitter: vscode.EventEmitter<Item | Item[] | void | void | null | undefined> = new vscode.EventEmitter<Item[]>();
     readonly onDidChangeTreeData: vscode.Event<Item | Item[] | void | null | undefined> = this.treeDataChangedEventEmitter.event;
 
-    private itemManager = ItemManagerFacadeFactory.Create();
+    private itemManager = ItemItemFactory.ItemManager();
 
     constructor(context: vscode.ExtensionContext) { }
 
@@ -26,9 +26,9 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         // TODO use strategy pattern to handle different types of Item
         if (element.fileInfo.type === vscode.FileType.Directory) {
-            await this.itemManager.LoadItemsInDir(element);
+            await this.itemManager.LoadFileItemChildren(element);
         } else if (element.fileInfo.type === vscode.FileType.File) {
-            await this.itemManager.LoadOutlineItems(element as FileItem);
+            await this.itemManager.LoadOutlineItemChildren(element as FileItem);
         }
 
         this.dataChanged(element);
@@ -88,7 +88,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     async AddOutlineExplorerFileItem(uri: vscode.Uri): Promise<Item | undefined> {
-        let items = await this.itemManager.LoadItemsInPath(uri);
+        let items = await this.itemManager.LoadParents(uri);
 
         if (items.length === 0) {
             return;
@@ -98,7 +98,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         // update the parent's children
         if (item.parent) {
-            await this.itemManager.LoadItemsInDir(item.parent);
+            await this.itemManager.LoadFileItemChildren(item.parent);
         }
 
         this.dataChanged(item.parent);
@@ -107,7 +107,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     RemoveItem(uri: vscode.Uri): Item | undefined {
-        let fileItem = this.itemManager.GetFileItem(uri);
+        let fileItem = this.itemManager.GetItem(uri);
         if (!fileItem) {
             return;
         }
@@ -145,7 +145,14 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
             return element.parent;
         }
 
-        return this.itemManager.LoadParentItem(element);
+        const uri = element.fileInfo.uri;
+
+        let fileItems = await this.itemManager.LoadParents(uri);
+        if (!fileItems || fileItems.length === 0) {
+            element.parent = undefined;
+        }
+
+        return element.parent;
     }
 
     // vscode.TreeDataProvider implementation
@@ -175,9 +182,9 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         // TODO duplicate code with Refresh
         if (element.fileInfo.type === vscode.FileType.Directory) {
-            children = await this.itemManager.LoadItemsInDir(element);
+            children = await this.itemManager.LoadFileItemChildren(element);
         } else {
-            children = await this.itemManager.LoadOutlineItems(element as FileItem);
+            children = await this.itemManager.LoadOutlineItemChildren(element as FileItem);
         }
 
         element.children = children;
@@ -186,13 +193,18 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     async LoadOutlineItemsOfUri(uri: vscode.Uri): Promise<Item[] | undefined> {
-        let items = await this.itemManager.LoadOutlineItemsOfUri(uri);
+        let fileItem = await this.itemManager.LoadFileItem(uri);
+
+        if (!fileItem) {
+            return undefined;
+        }
+
+        let items = await this.itemManager.LoadOutlineItemChildren(fileItem);
         if (!items || items.length === 0) {
             return;
         }
 
-        let parent = items[0].parent;
-        this.dataChanged(parent);
+        this.dataChanged(fileItem);
 
         return items;
     }
@@ -205,7 +217,7 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
         let workspaceFolderItems = new Array<Item>();
         for (let workspaceFolder of workspaceFolders) {
-            let workspaceFolderItem = this.itemManager.GetFileItem(workspaceFolder.uri);
+            let workspaceFolderItem = this.itemManager.GetItem(workspaceFolder.uri);
             if (workspaceFolderItem) {
                 workspaceFolderItems.push(workspaceFolderItem);
                 continue;
@@ -213,9 +225,9 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
             workspaceFolderItem = new FileItem(workspaceFolder.uri, vscode.FileType.Directory);
 
-            this.itemManager.SetFileItem(workspaceFolder.uri, workspaceFolderItem);
+            this.itemManager.SetItem(workspaceFolder.uri, workspaceFolderItem);
 
-            await this.itemManager.LoadItemsInDir(workspaceFolderItem);
+            await this.itemManager.LoadFileItemChildren(workspaceFolderItem);
 
             workspaceFolderItems.push(workspaceFolderItem);
         }
@@ -224,12 +236,12 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
     }
 
     async GetMatchedItemInRange(uri: vscode.Uri, selection: vscode.Selection): Promise<Item | undefined> {
-        let fileItem = this.itemManager.GetFileItem(uri);
+        let fileItem = this.itemManager.GetItem(uri);
         if (!fileItem) {
             return;
         }
 
-        let items = await this.itemManager.LoadOutlineItems(fileItem);
+        let items = await this.itemManager.LoadOutlineItemChildren(fileItem);
         if (!items) {
             return;
         }

@@ -7,13 +7,12 @@ import { getFileInfosInPath, getFileInfosInDir } from './file';
 
 
 interface ItemManager {
-    LoadItem(uri: vscode.Uri): Promise<FileItem | undefined>
+    LoadFileItem(uri: vscode.Uri): Promise<FileItem | undefined>
     LoadParents(uri: vscode.Uri): Promise<Item[]>
-    LoadParent(element: Item): Promise<Item | undefined>
-    LoadChildren(element: Item): Promise<FileItem[]>
-    LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]>
+    LoadFileItemChildren(element: Item): Promise<FileItem[]>
+    LoadOutlineItemChildren(fileItem: FileItem): Promise<OutlineItem[]>
 
-    GetItem(uri: vscode.Uri): Item | undefined
+    GetItem(uri: vscode.Uri): FileItem | undefined
     SetItem(uri: vscode.Uri, items: Item): void
     DeleteItem(element: Item): void
 }
@@ -39,7 +38,7 @@ class ItemManagerImpl implements ItemManager {
         }
     }
 
-    async LoadItem(uri: vscode.Uri): Promise<FileItem | undefined> {
+    async LoadFileItem(uri: vscode.Uri): Promise<FileItem | undefined> {
         let item = this.GetItem(uri);
         if (item) {
             return item;
@@ -83,18 +82,7 @@ class ItemManagerImpl implements ItemManager {
         }
     }
 
-    async LoadParent(element: Item): Promise<Item | undefined> {
-        const uri = element.fileInfo.uri;
-
-        let fileItems = await this.LoadParents(uri);
-        if (!fileItems || fileItems.length === 0) {
-            element.parent = undefined;
-        }
-
-        return element.parent;
-    }
-
-    async LoadChildren(element: Item): Promise<FileItem[]> {
+    async LoadFileItemChildren(element: Item): Promise<FileItem[]> {
         let uri = element.fileInfo.uri;
 
         let fileItems = await getFileInfosInDir(uri, this.getIgnoredUris(uri));
@@ -120,7 +108,7 @@ class ItemManagerImpl implements ItemManager {
         return outlineExplorerFileInfos;
     }
 
-    async LoadOutlineItems(fileItem: FileItem): Promise<OutlineItem[]> {
+    async LoadOutlineItemChildren(fileItem: FileItem): Promise<OutlineItem[]> {
         if (fileItem.fileInfo.type !== vscode.FileType.File) {
             return [];
         }
@@ -153,31 +141,31 @@ class ItemManagerImpl implements ItemManager {
     }
 
     async LoadParents(uri: vscode.Uri): Promise<FileItem[]> {
-        let fileItemsInPath = await getFileInfosInPath(uri);
-        if (!fileItemsInPath) {
+        let fileInfoInPath = await getFileInfosInPath(uri);
+        if (!fileInfoInPath) {
             return [];
         }
 
-        let outlineExplorerFileInfos: FileItem[] = [];
-        for (let i = 0; i < fileItemsInPath.length; i++) {
-            const fileItem = fileItemsInPath[i];
+        let fileInfos: FileItem[] = [];
+        for (let i = 0; i < fileInfoInPath.length; i++) {
+            const fileInfo = fileInfoInPath[i];
 
-            let existFileInfo = this.uri2FileInfo.get(fileItem.uri.toString());
+            let existFileInfo = this.uri2FileInfo.get(fileInfo.uri.toString());
             if (existFileInfo) {
-                outlineExplorerFileInfos.push(existFileInfo);
+                fileInfos.push(existFileInfo);
                 continue;
             }
 
-            let item = new FileItem(fileItem.uri, fileItem.type);
-            item.parent = i === 0 ? undefined : outlineExplorerFileInfos[i - 1];
+            let item = new FileItem(fileInfo.uri, fileInfo.type);
+            item.parent = i === 0 ? undefined : fileInfos[i - 1];
 
-            outlineExplorerFileInfos.push(item);
+            fileInfos.push(item);
         }
 
-        for (let item of outlineExplorerFileInfos) {
+        for (let item of fileInfos) {
             this.uri2FileInfo.set(item.fileInfo.uri.toString(), item);
         }
 
-        return outlineExplorerFileInfos;
+        return fileInfos;
     }
 }
