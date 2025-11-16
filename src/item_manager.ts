@@ -15,7 +15,7 @@ interface ItemManager {
     LoadChildren(element: Item): Promise<Item[] | undefined>
 
     GetItem(uri: vscode.Uri): FileItem | undefined
-    SetItem(uri: vscode.Uri, items: Item): void
+    SetItem(uri: vscode.Uri, items: FileItem): void
     DeleteItem(element: Item): void
 
     Refresh(element: Item): Promise<void>
@@ -74,12 +74,12 @@ class ItemManagerImpl implements ItemManager {
         return item;
     }
 
-    SetItem(uri: vscode.Uri, fileItem: Item): void {
+    SetItem(uri: vscode.Uri, fileItem: FileItem): void {
         if (fileItem.GetItemType() !== ItemType.File) {
             return;
         }
 
-        this.uri2FileInfo.set(uri.toString(), fileItem as FileItem);
+        this.uri2FileInfo.set(uri.toString(), fileItem);
     }
 
     DeleteItem(element: Item): void {

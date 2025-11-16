@@ -7,8 +7,6 @@ import { Item, ItemType, FileItem } from './item';
 import { OutlineExplorerDataProvider } from './item_data_provider';
 
 
-const DelayFirstRefreshTime = 2000;
-
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
@@ -17,6 +15,8 @@ export class OutlineExplorerTreeView {
 
     private treeViewVisible = false;
     private ignoreActiveEditorChange = false;
+
+    private treeViewVisibleChanged = false;
 
     constructor(context: vscode.ExtensionContext) {
         // 注册树视图
@@ -79,18 +79,6 @@ export class OutlineExplorerTreeView {
 
     Init() {
         this.dataProvider.UpdateGlobalCollapseState();
-
-        // wait the extension that provide the outline information to be ready
-        setTimeout(async () => {
-            Logger.Info('First Refresh Begin');
-
-            await this.Refresh(undefined);
-
-            Logger.Info('First Refresh End');
-
-            await this.revealActiveTextEditor();
-
-        }, DelayFirstRefreshTime);
     }
 
     Dispose() {
@@ -99,9 +87,11 @@ export class OutlineExplorerTreeView {
 
     OnVisibilityChanged(e: vscode.TreeViewVisibilityChangeEvent) {
         this.treeViewVisible = e.visible;
-        if (this.treeViewVisible) {
+        if (this.treeViewVisible && this.treeViewVisibleChanged) {
             this.revealActiveTextEditor();
         }
+
+        this.treeViewVisibleChanged = true;
     }
 
     async OnRenameFiles(event: vscode.FileRenameEvent) {
