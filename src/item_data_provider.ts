@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Item, ItemType, FileItem } from './item';
+import { Item, ItemType, FileItem, OutlineItem } from './item';
 import * as Logger from './log';
 import { ItemItemFactory } from './item_manager';
 
@@ -183,13 +183,19 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
             return;
         }
 
-        let items = await this.itemManager.LoadOutlineItemChildren(fileItem);
+        let items = fileItem.children;
         if (!items) {
             return;
         }
 
         for (let item of items) {
-            let result = item.GetMatchedItemInRange(selection);
+            if (item.GetItemType() !== ItemType.Outline) {
+                continue;
+            }
+
+            let outlineItem = item as OutlineItem;
+
+            let result = outlineItem.GetMatchedItemInRange(selection);
             if (result) {
                 return result;
             }
