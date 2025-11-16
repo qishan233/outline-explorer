@@ -2,6 +2,15 @@
 
 All notable changes to the "outline-explorer" extension will be documented in this file.
 
+## [0.1.0] - 2025-11-16
+
+### Added
+
+1. Expand all workspace folders;
+2. Collapse all expanded items;
+3. Expand current item and it's children. For performance considerations, only expand two times when there are folders or files;
+4. Collapse all the expanded child items of the current item;
+
 ## [0.0.6] - 2025-01-29
 
 ### Added

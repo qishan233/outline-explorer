@@ -46,6 +46,15 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ## Release Notes
 
+### 0.1.0
+
+Added the features required at [issue2](https://github.com/qishan233/outline-explorer/issues/2):
+
+- Expand all workspace folders;
+- Collapse all expanded items;
+- Expand current item and it's children. For performance considerations, only expand two times when there are folders or files;
+- Collapse all the expanded child items of the current item;
+
 ### 0.0.6
 
 Added the feature that revealing active editor item in tree view when the view is visible;

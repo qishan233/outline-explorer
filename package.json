@@ -2,7 +2,7 @@
   "name": "outline-explorer",
   "displayName": "Outline Explorer",
   "description": "This extension supports displaying outlines in a manner similar to the explorer, inspired by the \"Show Member\" feature in JetBrains IDEs.",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "icon": "resources/extension-icon.png",
   "publisher": "qishan233",
   "license": "SEE LICENSE IN LICENSE",
@@ -71,19 +71,19 @@
     "menus": {
       "view/item/context": [
         {
-          "command": "outline-explorer.refresh",
-          "when": "view == outline-explorer && (viewItem == file || viewItem == folder)",
-          "group": "navigation"
-        },
-        {
           "command": "outline-explorer.expand-2-levels",
           "when": "view == outline-explorer",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "outline-explorer.collapse-all",
           "when": "view == outline-explorer",
-          "group": "navigation"
+          "group": "navigation@2"
+        },
+        {
+          "command": "outline-explorer.refresh",
+          "when": "view == outline-explorer && (viewItem == file || viewItem == folder)",
+          "group": "navigation@3"
         }
       ],
       "view/title": [
@@ -121,6 +121,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/mocha": "^10.0.8",
     "@types/node": "20.x",
     "@types/vscode": "^1.95.0",
@@ -135,6 +136,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "js-yaml": "^4.1.1",
     "uuid": "^13.0.0"
   }
 }
