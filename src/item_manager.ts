@@ -207,25 +207,27 @@ class ItemManagerImpl implements ItemManager {
     }
 
     async ToExpand(item: Item | undefined, level: number = 0): Promise<void> {
-        if (level <= 0) {
+        if (level <= 0 || !item) {
             return;
         }
 
-        if (item) {
-            await item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Expanded);
-            this.expandedItems.add(item);
+        await item.SetCollapsibleState(vscode.TreeItemCollapsibleState.Expanded);
+        this.expandedItems.add(item);
 
-            if (!item.children) {
-                let children = await this.LoadChildren(item);
-                item.children = children;
-            }
 
-            for (let child of item.children ?? []) {
-                if (!this.expandedItems.has(child)) {
+        if (!item.children) {
+            let children = await this.LoadChildren(item);
+            item.children = children;
+        }
+
+        for (let child of item.children ?? []) {
+            if (!this.expandedItems.has(child)) {
+                if (child.GetItemType() === ItemType.File) {
                     this.ToExpand(child, level - 1);
+                } else {
+                    this.ToExpand(child, level);
                 }
             }
-            return;
         }
 
 

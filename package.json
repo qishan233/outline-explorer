@@ -34,8 +34,13 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "outline-explorer.expand-all",
-        "title": "%command.title.expand-all%",
+        "command": "outline-explorer.expand-1-level",
+        "title": "%command.title.expand-1-level%",
+        "icon": "$(expand-all)"
+      },
+      {
+        "command": "outline-explorer.expand-2-levels",
+        "title": "%command.title.expand-2-levels%",
         "icon": "$(expand-all)"
       },
       {
@@ -71,7 +76,7 @@
           "group": "navigation"
         },
         {
-          "command": "outline-explorer.expand-all",
+          "command": "outline-explorer.expand-2-levels",
           "when": "view == outline-explorer",
           "group": "navigation"
         },
@@ -83,7 +88,7 @@
       ],
       "view/title": [
         {
-          "command": "outline-explorer.expand-all",
+          "command": "outline-explorer.expand-1-level",
           "when": "view == outline-explorer && code-lens.context.can-expand",
           "group": "navigation"
         },

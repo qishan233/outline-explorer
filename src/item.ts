@@ -48,6 +48,11 @@ export abstract class Item {
             this.treeItem.id = id;
         }
 
+        // none means the item can not be set collapsible state
+        if (this.treeItem.collapsibleState === vscode.TreeItemCollapsibleState.None) {
+            return;
+        }
+
         this.treeItem.collapsibleState = state;
     }
 }

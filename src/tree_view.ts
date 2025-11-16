@@ -58,7 +58,10 @@ export class OutlineExplorerTreeView {
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.refresh', (item) => {
             this.Refresh(item);
         }, this));
-        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.expand-all', async (item) => {
+        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.expand-1-level', async () => {
+            await this.ToExpand(undefined);
+        }, this));
+        context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.expand-2-levels', async (item) => {
             await this.ToExpand(item);
         }, this));
         context.subscriptions.push(vscode.commands.registerCommand('outline-explorer.collapse-all', async (item) => {
