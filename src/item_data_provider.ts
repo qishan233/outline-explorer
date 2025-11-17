@@ -13,7 +13,9 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
 
     private workspaceFolderItems: Item[] = [];
 
-    constructor(context: vscode.ExtensionContext) { }
+    constructor() {
+
+    }
 
     /**===================== vscode.TreeDataProvider implementation ==========================**/
     async getTreeItem(element: Item): Promise<vscode.TreeItem> {
@@ -42,6 +44,8 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         if (element) {
             return this.getChildrenOfElement(element);
         }
+
+        Logger.Info('getChildren of element is undefined');
 
         return this.loadWorkspaceFolderItems();
     }

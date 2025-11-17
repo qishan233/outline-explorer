@@ -6,7 +6,7 @@ import * as Logger from './log';
 import { Item, ItemType, FileItem } from './item';
 import { OutlineExplorerDataProvider } from './item_data_provider';
 
-
+const DelayFirstRefreshTime = 2000;
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
@@ -20,7 +20,7 @@ export class OutlineExplorerTreeView {
 
     constructor(context: vscode.ExtensionContext) {
         // 注册树视图
-        this.dataProvider = new OutlineExplorerDataProvider(context);
+        this.dataProvider = new OutlineExplorerDataProvider();
         this.treeView = vscode.window.createTreeView('outline-explorer', { treeDataProvider: this.dataProvider });
 
         // 注册 tree view
@@ -78,6 +78,10 @@ export class OutlineExplorerTreeView {
     }
 
     Init() {
+        setTimeout(async () => {
+            await this.revealActiveTextEditor();
+        }, DelayFirstRefreshTime);
+
         this.dataProvider.UpdateGlobalCollapseState();
     }
 
@@ -113,24 +117,6 @@ export class OutlineExplorerTreeView {
             this.dataProvider.RemoveItem(file);
         }
     }
-
-    async RevealUri(uri: vscode.Uri) {
-        if (!this.treeViewVisible) {
-            return;
-        }
-
-        let item = await this.dataProvider.LoadFileItem(uri);
-        if (!item) {
-            return;
-        }
-
-        this.treeView.reveal(item, {
-            select: true,
-            focus: false,
-            expand: true,
-        });
-    }
-
 
     async OnTextEditorSelectionChanged(e: vscode.TextEditorSelectionChangeEvent) {
         if (!this.treeViewVisible) {
@@ -195,6 +181,23 @@ export class OutlineExplorerTreeView {
         item.OnClick();
 
         return;
+    }
+
+    async RevealUri(uri: vscode.Uri) {
+        if (!this.treeViewVisible) {
+            return;
+        }
+
+        let item = await this.dataProvider.LoadFileItem(uri);
+        if (!item) {
+            return;
+        }
+
+        this.treeView.reveal(item, {
+            select: true,
+            focus: false,
+            expand: true,
+        });
     }
 
     async Refresh(element: Item | undefined): Promise<void> {
