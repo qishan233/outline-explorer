@@ -202,6 +202,7 @@
   },
   "dependencies": {
     "js-yaml": "^4.1.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "vscode-nls": "^5.2.0"
   }
 }

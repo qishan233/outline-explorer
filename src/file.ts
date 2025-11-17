@@ -117,5 +117,10 @@ export async function getFileInfosInDir(uri: vscode.Uri, ignores: vscode.Uri[] |
 export function IsSupportedFile(uri: vscode.Uri): boolean {
     const unsupportedExtensions = GetUnsupportedExtensions();
 
-    return !unsupportedExtensions.has(path.extname(uri.fsPath).toLowerCase());
+    let ext = path.extname(uri.fsPath).toLowerCase();
+    if (ext === '') {
+        ext = path.basename(uri.fsPath).toLowerCase();
+    }
+
+    return !unsupportedExtensions.has(ext);
 }

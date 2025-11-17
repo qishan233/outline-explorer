@@ -6,5 +6,8 @@
     "command.title.expand-1-level": "展开所有(1层)",
     "command.title.expand-2-levels": "展开所有(2层)",
     "command.title.collapse-all": "折叠所有",
-    "configuration.unsupportedFileExtensions.description": "文件扩展名列表，这些类型的文件不会显示大纲信息（例如二进制文件）。需要包含点前缀（如 `.png`）"
+    "configuration.unsupportedFileExtensions.description": "文件扩展名列表，这些类型的文件不会显示大纲信息（例如二进制文件）。需要包含点前缀（如 `.png`）",
+    "config.changed.message": "文件扩展名配置已更改，需要重新加载窗口以使更改生效。",
+    "config.changed.reload": "立即重新加载",
+    "config.changed.later": "稍后"
 }

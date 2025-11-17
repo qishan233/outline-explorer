@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as Logger from './log';
 
 export async function GetDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
     if (!uri) {
@@ -10,15 +11,21 @@ export async function GetDocumentSymbols(uri: vscode.Uri): Promise<vscode.Docume
         }
     }
 
-    let results = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri);
+    try {
+        let results = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', uri);
 
-    if (!results) {
-        return [];
+        if (!results) {
+            return [];
+        }
+
+        results = sortDocumentSymbols(results);
+
+        return results;
+    } catch (error) {
+        Logger.Warn('GetDocumentSymbols error:', error);
     }
 
-    results = sortDocumentSymbols(results);
-
-    return results;
+    return [];
 }
 
 function sortDocumentSymbols(documentSymbols: vscode.DocumentSymbol[]): vscode.DocumentSymbol[] {

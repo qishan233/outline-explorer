@@ -6,5 +6,8 @@
     "command.title.expand-1-level": "Expand All(1 level)",
     "command.title.expand-2-levels": "Expand All(2 levels)",
     "command.title.collapse-all": "Collapse All",
-    "configuration.unsupportedFileExtensions.description": "File extensions that should not show outline information (e.g., binary files). Include the dot prefix (e.g., '.png')"
+    "configuration.unsupportedFileExtensions.description": "File extensions that should not show outline information (e.g., binary files). Include the dot prefix (e.g., '.png')",
+    "config.changed.message": "File extension configuration has changed. The window needs to be reloaded for the changes to take effect.",
+    "config.changed.reload": "Reload Now",
+    "config.changed.later": "Later"
 }
