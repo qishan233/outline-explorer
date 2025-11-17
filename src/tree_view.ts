@@ -6,7 +6,7 @@ import * as Logger from './log';
 import { Item, ItemType, FileItem } from './item';
 import { OutlineExplorerDataProvider } from './item_data_provider';
 
-const DelayFirstRefreshTime = 2000;
+const FirstRevealDelayTime = 1000;
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
@@ -80,7 +80,7 @@ export class OutlineExplorerTreeView {
     Init() {
         setTimeout(async () => {
             await this.revealActiveTextEditor();
-        }, DelayFirstRefreshTime);
+        }, FirstRevealDelayTime);
 
         this.dataProvider.UpdateGlobalCollapseState();
     }
