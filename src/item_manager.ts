@@ -3,7 +3,8 @@ import * as path from 'path';
 
 import { Item, ItemType, FileItem, OutlineItem } from './item';
 import { GetDocumentSymbols } from './outline';
-import { getFileInfosInPath, getFileInfosInDir } from './file';
+import { getFileInfosInPath, getFileInfosInDir, IsSupportedFile } from './file';
+
 
 
 interface ItemManager {
@@ -124,6 +125,11 @@ class ItemManagerImpl implements ItemManager {
         if (fileItem.fileInfo.type !== vscode.FileType.File) {
             return [];
         }
+
+        if (!IsSupportedFile(fileItem.fileInfo.uri)) {
+            return [];
+        }
+
 
         const uri = fileItem.fileInfo.uri;
         const fileInfo = fileItem.fileInfo;

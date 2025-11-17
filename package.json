@@ -17,6 +17,71 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Outline Explorer",
+      "properties": {
+        "outline-explorer.unsupportedFileExtensions": {
+          "type": "array",
+          "default": [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".bmp",
+            ".ico",
+            ".svg",
+            ".webp",
+            ".tiff",
+            ".tif",
+            ".mp4",
+            ".avi",
+            ".mov",
+            ".wmv",
+            ".flv",
+            ".mkv",
+            ".webm",
+            ".mp3",
+            ".wav",
+            ".flac",
+            ".aac",
+            ".ogg",
+            ".wma",
+            ".m4a",
+            ".zip",
+            ".rar",
+            ".7z",
+            ".tar",
+            ".gz",
+            ".bz2",
+            ".xz",
+            ".exe",
+            ".dll",
+            ".so",
+            ".dylib",
+            ".bin",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".db",
+            ".sqlite",
+            ".class",
+            ".pyc",
+            ".o",
+            ".a",
+            ".lib",
+            ".vsix"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "%configuration.unsupportedFileExtensions.description%"
+        }
+      }
+    },
     "viewsWelcome": [
       {
         "view": "outline-explorer",

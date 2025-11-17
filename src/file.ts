@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as Logger from './log';
+import { GetUnsupportedExtensions } from './config';
 
 
 export class FileInfo {
@@ -110,4 +111,11 @@ export async function getFileInfosInDir(uri: vscode.Uri, ignores: vscode.Uri[] |
 
 
     return [];
+}
+
+
+export function IsSupportedFile(uri: vscode.Uri): boolean {
+    const unsupportedExtensions = GetUnsupportedExtensions();
+
+    return !unsupportedExtensions.has(path.extname(uri.fsPath).toLowerCase());
 }

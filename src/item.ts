@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 import { SymbolKind2IconId, OutlineInfo } from './outline';
-import { FileInfo } from './file';
+import { FileInfo, IsSupportedFile } from './file';
 
 import * as Logger from './log';
 import * as uuid from './id';
@@ -201,7 +202,6 @@ class TreeItemFactoryImpl implements TreeItemFactory {
         let fileItem = element.fileInfo;
 
         const treeItem = new vscode.TreeItem(fileItem.uri);
-        treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
         if (fileItem.type === vscode.FileType.File) {
             treeItem.iconPath = vscode.ThemeIcon.File;
@@ -210,11 +210,23 @@ class TreeItemFactoryImpl implements TreeItemFactory {
                 title: 'Click Item',
                 arguments: [element]
             };
-        } else {
-            treeItem.iconPath = vscode.ThemeIcon.Folder;
-        }
 
-        treeItem.contextValue = fileItem.type === vscode.FileType.File ? 'file' : 'folder';
+            // 检查是否为二进制文件（基于文件扩展名）
+            if (!IsSupportedFile(fileItem.uri)) {
+                // 二进制文件，设置为不可展开
+                treeItem.collapsibleState = vscode.TreeItemCollapsibleState.None;
+                treeItem.contextValue = 'unsupported';
+            } else {
+                // 文本文件，可以展开查看大纲
+                treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+                treeItem.contextValue = 'file';
+            }
+        } else {
+            // 文件夹
+            treeItem.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+            treeItem.iconPath = vscode.ThemeIcon.Folder;
+            treeItem.contextValue = 'folder';
+        }
 
         return treeItem;
     }

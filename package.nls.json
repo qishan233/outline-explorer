@@ -5,5 +5,6 @@
     "view.welcome.content": "Welcome to the Outline Explorer! This extension is initializing, please wait... or there is no content to display.",
     "command.title.expand-1-level": "Expand All(1 level)",
     "command.title.expand-2-levels": "Expand All(2 levels)",
-    "command.title.collapse-all": "Collapse All"
+    "command.title.collapse-all": "Collapse All",
+    "configuration.unsupportedFileExtensions.description": "File extensions that should not show outline information (e.g., binary files). Include the dot prefix (e.g., '.png')"
 }

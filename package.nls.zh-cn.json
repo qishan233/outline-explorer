@@ -5,5 +5,6 @@
     "view.welcome.content": "欢迎使用大纲浏览器！此扩展正在初始化，请稍等... 或者没有内容可显示。",
     "command.title.expand-1-level": "展开所有(1层)",
     "command.title.expand-2-levels": "展开所有(2层)",
-    "command.title.collapse-all": "折叠所有"
+    "command.title.collapse-all": "折叠所有",
+    "configuration.unsupportedFileExtensions.description": "文件扩展名列表，这些类型的文件不会显示大纲信息（例如二进制文件）。需要包含点前缀（如 `.png`）"
 }
