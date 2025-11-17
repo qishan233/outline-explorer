@@ -137,12 +137,12 @@
       "view/item/context": [
         {
           "command": "outline-explorer.expand-2-levels",
-          "when": "view == outline-explorer",
+          "when": "view == outline-explorer && (viewItem !== unsupported)",
           "group": "navigation@1"
         },
         {
           "command": "outline-explorer.collapse-all",
-          "when": "view == outline-explorer",
+          "when": "view == outline-explorer && (viewItem !== unsupported)",
           "group": "navigation@2"
         },
         {
