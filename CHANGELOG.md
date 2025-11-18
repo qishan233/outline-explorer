@@ -10,6 +10,7 @@ All notable changes to the "outline-explorer" extension will be documented in th
 2. Collapse all expanded items;
 3. Expand current item and it's children. For performance considerations, only expand two times when there are folders or files;
 4. Collapse all the expanded child items of the current item;
+5. Support configuring file extensions to exclude from loading outline information;
 
 ## [0.0.6] - 2025-01-29
 

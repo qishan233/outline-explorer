@@ -44,6 +44,40 @@
 
 ![refresh](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/refresh.gif)
 
+### 展开和折叠
+
+支持从视图标题展开所有工作区文件夹以及折叠所有已展开的树项。
+
+支持从当前项的右键菜单展开下两层以及折叠所有已展开的子项。
+
+![展开](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/expand.gif)
+
+## 配置
+
+### 不支持的文件扩展名
+
+你可以配置哪些文件扩展名不应该加载大纲信息。这对于二进制文件和其他没有有意义大纲的文件类型很有用。
+
+**配置项**: `outline-explorer.unsupportedFileExtensions`
+
+**默认值**: 包含常见的二进制文件扩展名（图片、视频、音频、压缩包、可执行文件等）
+
+**示例**:
+
+```json
+{
+  "outline-explorer.unsupportedFileExtensions": [
+    ".png",
+    ".jpg",
+    ".pdf",
+    ".zip",
+    ".exe"
+  ]
+}
+```
+
+**注意**: 文件扩展名需要包含点前缀（例如 `.png`）。修改此配置后，插件自动刷新。
+
 ## 发布说明
 
 ### 0.1.0

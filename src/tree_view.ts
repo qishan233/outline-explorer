@@ -111,19 +111,10 @@ export class OutlineExplorerTreeView {
     }
 
     OnUnsupportedFileExtensionsChanged(e: config.UnsupportedFileExtChangeEvent) {
-        // 弹窗提醒用户重新加载窗口
-        const message = localize('config.changed.message', 'File extension configuration has changed. The window needs to be reloaded for the changes to take effect.');
-        const reloadButton = localize('config.changed.reload', 'Reload Now');
-        const laterButton = localize('config.changed.later', 'Later');
+        this.dataProvider.Reset();
 
-        vscode.window.showInformationMessage(
-            message,
-            reloadButton,
-            laterButton
-        ).then(selection => {
-            if (selection === reloadButton) {
-                vscode.commands.executeCommand('workbench.action.reloadWindow');
-            }
+        this.dataProvider.Refresh(undefined).then(() => {
+            this.revealActiveTextEditor();
         });
     }
 

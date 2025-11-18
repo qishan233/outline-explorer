@@ -20,6 +20,7 @@ interface ItemManager {
     DeleteItem(element: Item): void
 
     Refresh(element: Item): Promise<void>
+    Reset(): void
 
     OnDidExpand(element: Item): Promise<void>
     OnDidCollapse(element: Item): Promise<void>
@@ -196,6 +197,14 @@ class ItemManagerImpl implements ItemManager {
 
         let children = await this.LoadChildren(element);
         element.children = children;
+    }
+
+    Reset(): void {
+        for (const item of this.uri2FileInfo.values()) {
+            item.ResetTreeItem();
+        }
+
+        this.expandedItems.clear();
     }
 
     async LoadChildren(element: Item): Promise<Item[] | undefined> {

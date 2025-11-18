@@ -67,6 +67,11 @@ export class OutlineExplorerDataProvider implements vscode.TreeDataProvider<Item
         this.dataChanged(element);
     }
 
+    Reset() {
+        this.itemManager.Reset();
+        this.UpdateGlobalCollapseState();
+    }
+
     async ToExpand(element: Item | undefined): Promise<void> {
         if (element) {
             let affectedItems = await this.itemManager.ToExpand(element, MaxExpandLevel);

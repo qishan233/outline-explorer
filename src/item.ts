@@ -56,6 +56,10 @@ export abstract class Item {
 
         this.treeItem.collapsibleState = state;
     }
+
+    ResetTreeItem(): void {
+        this.treeItem = undefined;
+    }
 }
 
 export class FileItem extends Item {

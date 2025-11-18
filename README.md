@@ -44,6 +44,40 @@ In some scenarios (such as when the outline provider plugin that this extension 
 
 ![Refresh](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/refresh.gif)
 
+### Expand and Collapse
+
+Supports expanding all workspace folders and collapsing all expanded tree items from the view title.
+
+Supports expanding item's next 2 levels and collapsing all expanded child items from the item context menu.
+
+![Expand](https://raw.githubusercontent.com/qishan233/images/main/vscode-extension/expand.gif)
+
+## Configuration
+
+### Unsupported File Extensions
+
+You can configure which file extensions should not load outline information. This is useful for binary files and other file types that don't have meaningful outlines.
+
+**Setting**: `outline-explorer.unsupportedFileExtensions`
+
+**Default**: Includes common binary file extensions (images, videos, audio, archives, executables, etc.)
+
+**Example**:
+
+```json
+{
+  "outline-explorer.unsupportedFileExtensions": [
+    ".png",
+    ".jpg",
+    ".pdf",
+    ".zip",
+    ".exe"
+  ]
+}
+```
+
+**Note**: File extensions should include the dot prefix (e.g., `.png`). After modifying this configuration, this plugin will auto take effect.
+
 ## Release Notes
 
 ### 0.1.0
