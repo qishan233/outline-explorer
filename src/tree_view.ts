@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import * as nls from 'vscode-nls';
 
 import * as eventHandler from './listener';
-import * as Logger from './log';
-import { Item, ItemType, FileItem } from './item';
+import { Item, ItemType } from './item';
 import { OutlineExplorerDataProvider } from './item_data_provider';
+import * as config from './config';
 
 const FirstRevealDelayTime = 1000;
+const localize = nls.loadMessageBundle();
 
 export class OutlineExplorerTreeView {
     private treeView: vscode.TreeView<Item>;
@@ -35,8 +36,19 @@ export class OutlineExplorerTreeView {
         // 注册 VSCode 事件处理程序
         this.registerVSCodeEventHandlers();
 
+        // 监听配置变更
+        this.watchConfigurationChanges(context);
+
         // 初始化
         this.Init();
+    }
+
+    watchConfigurationChanges(context: vscode.ExtensionContext): void {
+        config.Init(context);
+
+        config.UnsupportedFileExtConfigChangedEvent(e => {
+            this.OnUnsupportedFileExtensionsChanged(e);
+        });
     }
 
     registerVSCodeEventHandlers(): void {
@@ -96,6 +108,23 @@ export class OutlineExplorerTreeView {
         }
 
         this.treeViewVisibleChanged = true;
+    }
+
+    OnUnsupportedFileExtensionsChanged(e: config.UnsupportedFileExtChangeEvent) {
+        // 弹窗提醒用户重新加载窗口
+        const message = localize('config.changed.message', 'File extension configuration has changed. The window needs to be reloaded for the changes to take effect.');
+        const reloadButton = localize('config.changed.reload', 'Reload Now');
+        const laterButton = localize('config.changed.later', 'Later');
+
+        vscode.window.showInformationMessage(
+            message,
+            reloadButton,
+            laterButton
+        ).then(selection => {
+            if (selection === reloadButton) {
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+        });
     }
 
     async OnRenameFiles(event: vscode.FileRenameEvent) {

@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import { OutlineExplorerTreeView } from './tree_view';
 import * as logger from './log';
-import { watchConfigurationChanges } from './config';
 
 let treeView: OutlineExplorerTreeView;
 
@@ -11,9 +10,6 @@ let treeView: OutlineExplorerTreeView;
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 	treeView = new OutlineExplorerTreeView(context);
-
-	// 监听配置变更
-	watchConfigurationChanges(context);
 
 	logger.Info('Congratulations, your extension "outline-explorer" is now active!');
 }
